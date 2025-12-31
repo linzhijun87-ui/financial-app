@@ -2,14 +2,15 @@
   "name": "Financial Masterplan PRO",
   "short_name": "FinMaster",
   "description": "Plan your financial future - Sync across devices",
-  "start_url": "/financial-app/",
-  "scope": "/financial-app/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "display_override": ["window-controls-overlay"],
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#2c3e50",
   "theme_color": "#3498db",
   "categories": ["finance", "productivity", "utilities"],
+  
   "icons": [
     {
       "src": "icons/icon-192x192.png",
@@ -23,29 +24,8 @@
       "type": "image/png"
     }
   ],
-  "screenshots": [
-    {
-      "src": "screenshots/dashboard-mobile.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Dashboard View"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Add Expense",
-      "short_name": "Expense",
-      "description": "Quickly add new expense",
-      "url": "/financial-app/?action=add-expense",
-      "icons": [{ "src": "icons/expense-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Add Income", 
-      "short_name": "Income",
-      "description": "Quickly add new income",
-      "url": "/financial-app/?action=add-income",
-      "icons": [{ "src": "icons/income-96x96.png", "sizes": "96x96" }]
-    }
-  ]
+  
+  "screenshots": [],
+  
+  "shortcuts": []
 }
