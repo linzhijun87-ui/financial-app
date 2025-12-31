@@ -1,5 +1,5 @@
 // Service Worker for Financial Masterplan PRO
-const CACHE_NAME = 'financial-masterplan-v3.2';
+const CACHE_NAME = 'financial-masterplan-v1.0.2';
 const CACHE_FILES = [
   '/financial-app/',
   '/financial-app/index.html',

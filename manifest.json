@@ -1,6 +1,7 @@
 {
   "name": "Financial Masterplan PRO",
   "short_name": "FinMaster",
+  "version": "1.0.2",
   "description": "Plan your financial future - Sync across devices",
   "start_url": ".",
   "scope": ".",
