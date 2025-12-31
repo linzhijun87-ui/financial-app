@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Masterplan PRO - Target 300 Juta</title>
+    <meta name="theme-color" content="#3498db">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FinMaster">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>💰 FINANCIAL MASTERPLAN PRO v3.1</h1>
+            <div class="stats-bar">
+                <div class="stat-item">🎯 Target: <span id="header-target">Rp 300 Juta</span></div>                
+                <div class="stat-item" onclick="showTab('dashboard')">
+                    📅 Sisa: <span id="days-left">1080</span> hari
+                </div>
+                <div class="stat-item" onclick="showTab('dashboard')">
+                    💵 Tabungan: <span id="total-saved">Rp 0</span>
+                </div>
+                <div class="stat-item">
+                    📊 Progress: <span id="overall-progress">0%</span>
+                </div>
+                <div class="notification-bell" onclick="showNotifications()">
+                    🔔 <span class="notification-badge" id="notification-count">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- NAVIGASI -->
+        <nav class="main-nav">
+            <div class="nav-item active" onclick="showTab('dashboard')">📊 Dashboard</div>
+            <div class="nav-item" onclick="showTab('expenses')">💸 Pengeluaran</div>
+            <div class="nav-item" onclick="showTab('income')">💰 Pendapatan</div>
+            <div class="nav-item" onclick="showTab('checklists')">✅ Checklist</div>
+            <div class="nav-item" onclick="showTab('investments')">📈 Simulasi</div>
+            <div class="nav-item" onclick="showTab('settings')">⚙️ Pengaturan</div>
+        </nav>
+
+        <!-- KONTEN -->
+        <div class="content-area">
+            <!-- DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content active">
+                <h2>📊 Dashboard Keuangan</h2>
+                <div class="dashboard-grid">
+                    <!-- PROGRESS -->
+                    <div class="card">
+                        <h3 class="card-title" id="dashboard-target-title">Progress Menuju Rp 300 Juta</h3>
+                        <div class="progress-container">
+                            <div style="height: 30px; background: #ecf0f1; border-radius: 15px; overflow: hidden;">
+                                <div id="main-progress-bar" style="height: 100%; background: linear-gradient(90deg, #2ecc71, #1abc9c); width: 0%; border-radius: 15px;"></div>
+                            </div>
+                            <div style="text-align: center; margin-top: -25px; font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                                <span id="main-progress-text">0%</span>
+                            </div>
+                        </div>
+                        <p><strong>Perlu ditabung:</strong> <span id="needed-per-month">8.333.333</span>/bulan</p>
+                        <p><strong>Saldo bulan ini:</strong> <span id="actual-per-month" style="font-weight: bold;">Rp 0</span></p>
+                    </div>
+
+                    <!-- SALDO BULAN INI -->
+                    <div class="card">
+                        <h3 class="card-title">Saldo Bulan Ini</h3>
+                        <div style="text-align: center; padding: 20px;">
+                            <h2 id="current-month-balance" style="font-size: 2em; color: #27ae60;">Rp 0</h2>
+                            <p style="color: #7f8c8d; margin: 15px 0;">
+                                <small>Pendapatan - Pengeluaran bulan berjalan</small>
+                            </p>
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button class="btn btn-blue" onclick="showTab('income')">➕ Tambah Pendapatan</button>
+                                <button class="btn" onclick="showTab('expenses')">📤 Tambah Pengeluaran</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card Pengeluaran & Charts -->
+                    <div class="card">
+                        <h3 class="card-title">📊 Analisis Pengeluaran</h3>
+                        
+                        <!-- Tabs untuk pilihan chart -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                            <button class="btn btn-small chart-tab active" data-chart="categories" onclick="switchChartTab('categories')">
+                                🥧 Per Kategori
+                            </button>
+                            <button class="btn btn-small chart-tab" data-chart="monthly" onclick="switchChartTab('monthly')">
+                                📈 Trend Bulanan
+                            </button>
+                            <button class="btn btn-small chart-tab" data-chart="progress" onclick="switchChartTab('progress')">
+                                🎯 Progress Goal
+                            </button>
+                        </div>
+                        
+                        <!-- Container untuk semua chart -->
+                        <div class="chart-container" style="height: 350px;">
+                            <!-- Chart 1: Kategori Pengeluaran -->
+                            <canvas id="expenseChart" style="display: block;"></canvas>
+                            
+                            <!-- Chart 2: Trend Bulanan -->
+                            <canvas id="monthlyTrendChart" style="display: none;"></canvas>
+                            
+                            <!-- Chart 3: Progress Goal -->
+                            <canvas id="progressChart" style="display: none;"></canvas>
+                        </div>
+                        
+                        <!-- Summary Stats -->
+                        <div id="chart-summary" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div id="categories-summary" class="chart-summary">
+                                <!-- Akan diisi oleh JavaScript -->
+                            </div>
+                            <div id="monthly-summary" class="chart-summary" style="display: none;">
+                                <!-- Akan diisi oleh JavaScript -->
+                            </div>
+                            <div id="progress-summary" class="chart-summary" style="display: none;">
+                                <!-- Akan diisi oleh JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NOTIFIKASI -->
+                <div class="card">
+                    <h3 class="card-title">Pengingat & Tips</h3>
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Perhatian!</strong> Rencanakan anggaran untuk Imlek Februari 2026.
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>💡 Tips:</strong> Fokus menabung dulu sebelum mempertimbangkan kredit motor.
+                    </div>
+                    <div id="custom-reminders"></div>
+                </div>
+            </div>
+
+            <!-- PENGELUARAN -->
+            <div id="tab-expenses" class="tab-content">
+                <h2>💸 Kelola Pengeluaran</h2>
+                <div class="dashboard-grid">
+                    <!-- FORM TAMBAH -->
+                    <div class="card">
+                        <h3 class="card-title">Tambah Pengeluaran Baru</h3>
+                        <div class="form-group">
+                            <label>Deskripsi:</label>
+                            <input type="text" id="expense-desc" placeholder="Contoh: Angpao Imlek">
+                        </div>
+                        <div class="form-group">
+                            <label>Jumlah (Rp):</label>
+                            <input type="number" id="expense-amount" placeholder="200000">
+                        </div>
+                        <div class="form-group">
+                            <label>Tanggal:</label>
+                            <input type="date" id="expense-date">
+                        </div>
+                        <div class="form-group">
+                            <label>Kategori:</label>
+                            <div class="expense-categories">
+                                <div class="category-btn active" data-category="keluarga" onclick="selectCategory(this, 'keluarga')">
+                                    👨‍👩‍👧‍👦 Keluarga
+                                </div>
+                                <div class="category-btn" data-category="kebutuhan" onclick="selectCategory(this, 'kebutuhan')">
+                                    🛒 Kebutuhan
+                                </div>
+                                <div class="category-btn" data-category="hiburan" onclick="selectCategory(this, 'hiburan')">
+                                    🎉 Hiburan
+                                </div>
+                                <div class="category-btn" data-category="investasi" onclick="selectCategory(this, 'investasi')">
+                                    📈 Investasi
+                                </div>
+                                <div class="category-btn" data-category="lainnya" onclick="selectCategory(this, 'lainnya')">
+                                    📦 Lainnya
+                                </div>
+                            </div>
+                            <input type="hidden" id="selected-category" value="keluarga">
+                        </div>
+                        <button class="btn" onclick="addExpense()" id="btn-add-expense">
+                            ➕ Tambah Pengeluaran
+                        </button>
+                    </div>
+                    
+                    <div class="card">
+                        <h3 class="card-title">
+                            Daftar Pengeluaran
+                            <select class="month-filter" id="expense-month-filter" onchange="filterExpensesByMonth()">
+                                <option value="current">Bulan Ini</option>
+                                <option value="all">Semua Bulan</option>
+                                <option value="2025-12">Desember 2025</option>
+                                <option value="2026-01">Januari 2026</option>
+                                <option value="2026-02">Februari 2026</option>
+                            </select>
+                        </h3>
+                        <div class="expense-list" id="expense-list-container">
+                            <p style="text-align: center; color: #999; padding: 20px;">Belum ada pengeluaran.</p>
+                        </div>
+                        <p><strong>Total ditampilkan: <span id="expense-total-display">Rp 0</span></strong></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PENDAPATAN -->
+            <div id="tab-income" class="tab-content">
+                <h2>💰 Kelola Pendapatan</h2>
+                <div class="dashboard-grid">
+                    <!-- FORM TAMBAH -->
+                    <div class="card">
+                        <h3 class="card-title">Tambah Pendapatan</h3>
+                        <div class="form-group">
+                            <label>Sumber:</label>
+                            <select id="income-source">
+                                <option value="gaji_utama">Gaji Utama</option>
+                                <option value="freelance">Freelance/Side Job</option>
+                                <option value="bonus">Bonus/THR</option>
+                                <option value="investasi">Hasil Investasi</option>
+                                <option value="lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Jumlah (Rp):</label>
+                            <input type="number" id="income-amount" placeholder="11000000">
+                        </div>
+                        <div class="form-group">
+                            <label>Tanggal:</label>
+                            <input type="date" id="income-date">
+                        </div>
+                        <div class="form-group">
+                            <label>Keterangan:</label>
+                            <textarea id="income-notes" rows="2" placeholder="Contoh: Gaji Desember 2025"></textarea>
+                        </div>
+                        <button class="btn btn-blue" onclick="addIncome()" id="btn-add-income">
+                            💰 Tambah Pendapatan
+                        </button>
+                    </div>
+
+                    <!-- STATISTIK -->
+                    <div class="card">
+                        <h3 class="card-title">Statistik Pendapatan</h3>
+                        <div class="chart-container">
+                            <canvas id="incomeChart"></canvas>
+                        </div>
+                        <p><strong>Total bulan ini:</strong> <span id="monthly-income-total" style="color: #27ae60;">Rp 0</span></p>
+                        <p><strong>Sumber terbesar:</strong> <span id="largest-income-source">-</span></p>
+                    </div>
+
+                    <!-- RIWAYAT -->
+                    <div class="card">
+                        <h3 class="card-title">
+                            Riwayat Pendapatan
+                            <select class="month-filter" id="income-month-filter" onchange="filterIncomeByMonth()">
+                                <option value="current">Bulan Ini</option>
+                                <option value="all">Semua Bulan</option>
+                                <option value="2025-12">Desember 2025</option>
+                                <option value="2026-01">Januari 2026</option>
+                                <option value="2026-02">Februari 2026</option>
+                            </select>
+                        </h3>
+                        <div class="expense-list" id="income-history-container">
+                            <p style="text-align: center; color: #999; padding: 20px;">Belum ada pendapatan.</p>
+                        </div>
+                        <p><strong>Total ditampilkan: <span id="yearly-income-total">Rp 0</span></strong></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHECKLIST -->
+            <div id="tab-checklists" class="tab-content">
+                <h2>✅ Checklist Persiapan</h2>
+                <div class="card">
+                    <h3 class="card-title">Checklist Keuangan</h3>
+                    <div class="checklist-system" id="master-checklist"></div>
+                    <button class="btn" onclick="addChecklistItem()">
+                        ➕ Tambah Item Baru
+                    </button>
+                </div>
+            </div>
+
+            <!-- SIMULASI -->
+            <div id="tab-investments" class="tab-content">
+                <h2>📈 Simulasi Investasi</h2>
+                <div class="card">
+                    <h3 class="card-title" id="simulation-target-title">Simulasi Mencapai Rp 300 Juta</h3>
+                    <div class="slider-container">
+                        <div class="form-group">
+                            <label>Tabungan bulanan: <span id="saving-slider-value">Rp 500.000</span></label>
+                            <input type="range" min="0" max="10000000" step="100000" value="500000" 
+                                   class="what-if-slider" id="saving-slider" oninput="updateSimulation()">
+                        </div>
+                        <div class="form-group">
+                            <label>Return investasi tahunan: <span id="return-slider-value">6%</span></label>
+                            <input type="range" min="0" max="20" step="1" value="6" 
+                                   class="what-if-slider" id="return-slider" oninput="updateSimulation()">
+                        </div>
+                    </div>
+                    <div class="simulation-result">
+                        <h4>📊 Hasil Proyeksi 3 Tahun:</h4>
+                        <p><strong>Total terkumpul:</strong> <span id="simulated-total">Rp 0</span></p>
+                        <p><strong>Status target:</strong> <span id="target-status" style="font-weight: bold; color: #e74c3c;">BELUM TERCAPAI</span></p>
+                        <p><strong>Kekurangan/kelebihan:</strong> <span id="gap-amount">Rp 0</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PENGATURAN -->
+            <div id="tab-settings" class="tab-content">
+                <h2>⚙️ Pengaturan</h2>
+                <div class="card">
+                    <h3 class="card-title">Pengaturan Target</h3>
+                    <div class="form-group">
+                        <label>Target Dana (Rp):</label>
+                        <input type="number" id="target-amount-input" value="300" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Jangka Waktu (Tahun):</label>
+                        <input type="number" id="timeline-years-input" value="3" min="1">
+                    </div>
+                    <button class="btn" onclick="saveSettings()">
+                        💾 Simpan Target
+                    </button>
+                    <button class="btn btn-red" onclick="resetAllData()" style="margin-left: 10px;">
+                        🗑️ Reset Semua Data
+                    </button>
+                </div>
+                <div class="card" style="margin-top: 30px;">
+                    <h3 class="card-title">📁 Backup & Restore Data</h3>
+                    
+                    <div class="form-group">
+                        <label>📤 Export Data:</label>
+                        <p style="color: #7f8c8d; margin: 10px 0; font-size: 0.9em;">
+                            Download semua data ke file JSON untuk backup atau pindah ke perangkat lain.
+                        </p>
+                        <button class="btn btn-blue" onclick="exportData()">
+                            ⬇️ Download Backup File
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>📥 Import Data:</label>
+                        <p style="color: #7f8c8d; margin: 10px 0; font-size: 0.9em;">
+                            Upload file JSON backup untuk restore data.
+                        </p>
+                        <input type="file" id="import-file" accept=".json" style="margin-bottom: 10px;">
+                        <button class="btn" onclick="importData()">
+                            ⬆️ Upload & Restore Data
+                        </button>
+                        <div id="import-preview" style="margin-top: 15px; display: none;">
+                            <!-- Preview akan muncul di sini -->
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🔄 Data Saat Ini:</label>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 0.9em;">
+                            <p><strong>Pendapatan:</strong> <span id="data-count-income">0</span> transaksi</p>
+                            <p><strong>Pengeluaran:</strong> <span id="data-count-expense">0</span> transaksi</p>
+                            <p><strong>Terakhir backup:</strong> <span id="last-backup-time">-</span></p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Di dalam #tab-settings -->
+                <div class="card">
+                    <h3 class="card-title">📱 Multi-Device Sync</h3>
+                    
+                    <div class="alert alert-info">
+                        <strong>🔄 Cara Sync Laptop ↔ HP:</strong>
+                        <ol style="margin: 10px 0; padding-left: 20px;">
+                            <li><strong>💾 Backup</strong> data di perangkat pertama</li>
+                            <li><strong>📧 Kirim file</strong> .json ke perangkat kedua (WhatsApp/Email)</li>
+                            <li><strong>📂 Restore</strong> file di perangkat kedua</li>
+                            <li><strong>✅ Data sync!</strong></li>
+                        </ol>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 20px 0;">
+                        <!-- TAMBAH INI: Input Field untuk URL -->
+                        <div style="margin-bottom: 15px;">
+                            <input type="text" 
+                                id="qrText" 
+                                placeholder="https://linzhijun87-ui.github.io/web-app/"
+                                style="width: 80%; padding: 12px; border: 2px solid #4CAF50; border-radius: 8px; font-size: 14px;">
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                                Masukkan URL GitHub Pages Anda
+                            </p>
+                        </div>
+                        
+                        <button class="btn" onclick="generateQRCode()" style="padding: 12px 24px;">
+                            📱 Generate QR untuk HP
+                        </button>
+                        
+                        <!-- TAMBAH INI: Container untuk QR Code -->
+                        <div id="qrCode" style="margin-top: 25px; min-height: 300px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+                            <p style="color: #888;">QR Code akan muncul di sini</p>
+                        </div>
+                        
+                        <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                            Scan QR code untuk buka app di HP
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NOTIFIKASI -->
+    <div id="notification-modal" class="modal">
+        <div class="modal-content">
+            <h3>🔔 Notifikasi</h3>
+            <div id="notification-list">
+                <p>Belum ada notifikasi.</p>
+            </div>
+            <button class="btn" onclick="closeModal()">Tutup</button>
+        </div>
+    </div>
+    <script src="script-fixed.js"></script>
+    <!-- Tambahkan sebelum </body> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</body>
+</html>
