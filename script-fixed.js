@@ -793,7 +793,7 @@ function renderIncomeList() {
                 <div style="text-align: right;">
                     <div style="color: #27ae60; font-weight: bold;">${formatCurrency(income.amount)}</div>
                     <!-- ⭐⭐ TAMBAH TOMBOL HAPUS SAMA PERSIS DENGAN EXPENSE ⭐⭐ -->
-                    <button onclick="deleteIncome('${income.id}')" 
+                    <button onclick="deleteIncome(${income.id})" 
                             style="background: none; border: none; color: #999; cursor: pointer; font-size: 0.8em;">
                         Hapus
                     </button>
