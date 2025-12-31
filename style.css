@@ -497,3 +497,101 @@
             background: white !important;
             padding: 10px;
         }
+
+        /* ===== MOBILE OPTIMIZATION ===== */
+@media (max-width: 768px) {
+    /* Header & Nav */
+    .header h1 {
+        font-size: 1.2rem !important;
+    }
+    
+    .stats-bar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .stat-item {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+    
+    /* Navigation */
+    .main-nav {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 10px 0;
+    }
+    
+    .nav-item {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        display: inline-block;
+        white-space: nowrap;
+    }
+    
+    /* Cards */
+    .card {
+        margin: 10px 0;
+        padding: 15px;
+    }
+    
+    .card-title {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+    
+    /* Forms */
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        font-size: 16px !important; /* Prevent zoom on iOS */
+        padding: 12px;
+    }
+    
+    /* Buttons */
+    .btn {
+        padding: 12px 20px;
+        font-size: 1rem;
+        min-height: 44px; /* Minimum touch target size */
+    }
+    
+    /* QR Code Section */
+    #qrCode {
+        padding: 15px !important;
+        margin: 15px 0 !important;
+    }
+    
+    #qrText {
+        width: 95% !important;
+        margin: 10px auto !important;
+        padding: 12px !important;
+    }
+    
+    /* Charts */
+    .chart-container {
+        height: 250px !important;
+    }
+    
+    /* Expense/Income Lists */
+    .expense-item, .income-item {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .header h1 {
+        font-size: 1rem !important;
+    }
+    
+    .stats-bar {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 5px;
+    }
+}

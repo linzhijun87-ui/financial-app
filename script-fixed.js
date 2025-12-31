@@ -2283,6 +2283,45 @@ function loadQRCodeLibrary() {
     }
 }
 
+// Tambah di script-fixed.js
+function exportDataToQR() {
+    const allData = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        expenses: JSON.parse(localStorage.getItem('expenses') || '[]'),
+        income: JSON.parse(localStorage.getItem('income') || '[]'),
+        checklists: JSON.parse(localStorage.getItem('checklists') || '[]'),
+        settings: JSON.parse(localStorage.getItem('settings') || '{}')
+    };
+    
+    const encodedData = btoa(JSON.stringify(allData)); // Encode to base64
+    document.getElementById('qrText').value = encodedData;
+    generateQRCode();
+    
+    // Add decode button
+    const container = document.getElementById('qrCode');
+    const decodeBtn = document.createElement('button');
+    decodeBtn.textContent = '📥 Import Data dari QR Ini';
+    decodeBtn.onclick = () => {
+        const data = prompt('Paste encoded data dari QR:');
+        if (data) {
+            try {
+                const decoded = JSON.parse(atob(data));
+                // Save to localStorage
+                localStorage.setItem('expenses', JSON.stringify(decoded.expenses));
+                localStorage.setItem('income', JSON.stringify(decoded.income));
+                localStorage.setItem('checklists', JSON.stringify(decoded.checklists));
+                localStorage.setItem('settings', JSON.stringify(decoded.settings));
+                alert('✅ Data imported! Page will reload.');
+                location.reload();
+            } catch (e) {
+                alert('❌ Invalid data format');
+            }
+        }
+    };
+    container.appendChild(decodeBtn);
+}
+
 // Auto load saat buka tab settings
 document.addEventListener('DOMContentLoaded', function() {
     // Load library saat pertama kali
