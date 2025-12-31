@@ -498,100 +498,347 @@
             padding: 10px;
         }
 
-        /* ===== MOBILE OPTIMIZATION ===== */
+/* ===== ENHANCED MOBILE OPTIMIZATION ===== */
 @media (max-width: 768px) {
-    /* Header & Nav */
+    /* Global improvements */
+    body {
+        padding: 10px !important;
+        font-size: 16px !important;
+    }
+    
+    .container {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    /* Header - lebih compact tapi readable */
+    .header {
+        padding: 15px 20px !important;
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+    
     .header h1 {
-        font-size: 1.2rem !important;
+        font-size: 1.3rem !important;
+        margin-bottom: 5px;
+        line-height: 1.3;
     }
     
     .stats-bar {
-        flex-wrap: wrap;
-        gap: 8px;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        width: 100%;
+        margin-top: 10px;
     }
     
     .stat-item {
-        font-size: 0.8rem;
-        padding: 4px 8px;
+        font-size: 0.85rem !important;
+        padding: 10px 8px !important;
+        text-align: center;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.15) !important;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
-    /* Navigation */
+    /* Navigation - lebih touch-friendly */
     .main-nav {
-        overflow-x: auto;
-        white-space: nowrap;
-        padding: 10px 0;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 1px;
+        background: #3498db;
+        padding: 0 !important;
     }
     
     .nav-item {
-        padding: 8px 12px;
-        font-size: 0.9rem;
-        display: inline-block;
-        white-space: nowrap;
+        padding: 16px 8px !important;
+        font-size: 0.85rem !important;
+        text-align: center;
+        border: none !important;
+        background: #f8f9fa;
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 4px;
     }
     
-    /* Cards */
+    .nav-item.active {
+        background: #3498db !important;
+        color: white !important;
+        font-weight: bold;
+    }
+    
+    /* Content area - lebih spacious */
+    .content-area {
+        padding: 20px 15px !important;
+        min-height: auto;
+    }
+    
+    /* Cards - lebih rapi */
     .card {
-        margin: 10px 0;
-        padding: 15px;
+        margin: 15px 0 !important;
+        padding: 20px 15px !important;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
     }
     
     .card-title {
-        font-size: 1.1rem;
-        margin-bottom: 10px;
+        font-size: 1.2rem !important;
+        margin-bottom: 15px !important;
+        padding-bottom: 8px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
     }
     
-    /* Forms */
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        font-size: 16px !important; /* Prevent zoom on iOS */
-        padding: 12px;
+    /* Forms - lebih besar untuk touch */
+    .form-group {
+        margin: 20px 0 !important;
     }
     
-    /* Buttons */
+    .form-group label {
+        font-size: 1rem !important;
+        margin-bottom: 10px !important;
+        font-weight: 600;
+    }
+    
+    input, select, textarea {
+        padding: 16px 12px !important;
+        font-size: 18px !important; /* Lebih besar untuk mobile */
+        border-radius: 10px !important;
+        border: 2px solid #ddd !important;
+        min-height: 54px; /* Touch target lebih besar */
+    }
+    
+    /* Buttons - lebih besar dan jelas */
     .btn {
-        padding: 12px 20px;
-        font-size: 1rem;
-        min-height: 44px; /* Minimum touch target size */
+        padding: 18px 24px !important;
+        font-size: 1.1rem !important;
+        font-weight: 600;
+        border-radius: 12px !important;
+        min-height: 56px;
+        width: 100%;
+        margin: 10px 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
     }
     
-    /* QR Code Section */
+    /* Category buttons grid */
+    .expense-categories {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px;
+        margin: 20px 0 !important;
+    }
+    
+    .category-btn {
+        padding: 18px 12px !important;
+        font-size: 1rem !important;
+        min-height: 70px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        border-radius: 12px;
+    }
+    
+    /* Lists - lebih readable */
+    .expense-list, .income-list {
+        max-height: 50vh;
+        padding: 15px 10px !important;
+    }
+    
+    .expense-item, .income-item {
+        padding: 16px 12px !important;
+        font-size: 1rem !important;
+        margin: 8px 0;
+        border-radius: 10px;
+        border: 1px solid #eee;
+    }
+    
+    /* Charts - lebih optimal */
+    .chart-container {
+        height: 280px !important;
+        margin: 20px 0 !important;
+    }
+    
+    /* QR Code section - lebih focus */
     #qrCode {
-        padding: 15px !important;
-        margin: 15px 0 !important;
+        padding: 25px 15px !important;
+        margin: 25px 0 !important;
+        border-radius: 15px;
+        background: #f8f9fa !important;
+        border: 2px dashed #3498db;
     }
     
     #qrText {
+        width: 100% !important;
+        margin: 15px 0 !important;
+        padding: 18px !important;
+        font-size: 18px !important;
+        text-align: center;
+    }
+    
+    /* Alerts - lebih menonjol */
+    .alert {
+        padding: 20px 15px !important;
+        margin: 15px 0 !important;
+        font-size: 1rem !important;
+        border-radius: 12px;
+        border-left-width: 8px;
+    }
+    
+    /* Checklist items */
+    .checklist-item-custom {
+        padding: 18px 15px !important;
+        margin: 10px 0 !important;
+        border-radius: 12px;
+        font-size: 1rem !important;
+    }
+    
+    .checklist-item-custom input[type="checkbox"] {
+        transform: scale(1.5);
+        margin-right: 20px;
+    }
+    
+    /* Modal - lebih mobile friendly */
+    .modal-content {
         width: 95% !important;
-        margin: 10px auto !important;
-        padding: 12px !important;
+        max-width: 95% !important;
+        padding: 25px 20px !important;
+        border-radius: 20px;
+        margin: 10px;
     }
     
-    /* Charts */
-    .chart-container {
-        height: 250px !important;
+    /* Simulation sliders */
+    .slider-container {
+        padding: 25px 20px !important;
     }
     
-    /* Expense/Income Lists */
-    .expense-item, .income-item {
-        padding: 10px;
-        font-size: 0.9rem;
+    .what-if-slider {
+        width: 100% !important;
+        margin: 15px 0 !important;
+    }
+    
+    /* Hide non-essential elements on mobile */
+    .notification-bell .notification-badge {
+        width: 24px;
+        height: 24px;
+        font-size: 0.8rem;
     }
 }
 
-/* Extra small devices */
+/* Extra small devices (phones < 480px) */
 @media (max-width: 480px) {
+    .header h1 {
+        font-size: 1.1rem !important;
+    }
+    
+    .stats-bar {
+        grid-template-columns: 1fr !important;
+        gap: 6px !important;
+    }
+    
+    .main-nav {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .nav-item {
+        min-height: 70px;
+        font-size: 0.8rem !important;
+        padding: 12px 6px !important;
+    }
+    
+    .card-title {
+        font-size: 1.1rem !important;
+    }
+    
+    .btn {
+        padding: 16px 20px !important;
+        font-size: 1rem !important;
+    }
+    
+    .expense-categories {
+        grid-template-columns: 1fr !important;
+    }
+    
     .dashboard-grid {
         grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+    
+    /* Fix untuk iOS Safari */
+    input, select, textarea {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    
+    /* Better touch feedback */
+    .btn:active, .nav-item:active, .category-btn:active {
+        transform: scale(0.98);
+        opacity: 0.9;
+    }
+}
+
+/* Fix untuk layar sangat kecil (iPhone SE dll) */
+@media (max-width: 375px) {
+    .header {
+        padding: 12px 15px !important;
     }
     
     .header h1 {
         font-size: 1rem !important;
     }
     
-    .stats-bar {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 5px;
+    .stat-item {
+        font-size: 0.75rem !important;
+        padding: 8px 6px !important;
+    }
+    
+    .nav-item {
+        font-size: 0.75rem !important;
+        padding: 10px 4px !important;
+        min-height: 60px;
+    }
+    
+    .card {
+        padding: 15px 12px !important;
+    }
+    
+    .btn {
+        padding: 14px 18px !important;
+        font-size: 0.95rem !important;
+    }
+}
+
+/* Fix untuk landscape mode */
+@media (max-height: 500px) and (orientation: landscape) {
+    .header {
+        padding: 10px 15px !important;
+    }
+    
+    .main-nav {
+        grid-template-columns: repeat(6, 1fr) !important;
+    }
+    
+    .nav-item {
+        min-height: 50px;
+        padding: 10px 5px !important;
+    }
+    
+    .content-area {
+        padding: 15px !important;
+    }
+    
+    .expense-list, .income-list {
+        max-height: 40vh;
     }
 }
