@@ -535,65 +535,73 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Di script-fixed.js atau sebelum initializeApp()
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/financial-app/service-worker.js')
-      .then(function(registration) {
-        console.log('✅ ServiceWorker registered:', registration.scope);
-        
-        // Check for updates
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          console.log('🔄 ServiceWorker update found!');
-          
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('🔄 New content available!');
-              showUpdateNotification();
-            }
-          });
-        });
-      })
-      .catch(function(err) {
-        console.log('❌ ServiceWorker registration failed:', err);
-      });
+// ========== SERVICE WORKER REGISTRATION (FIXED) ==========
+function initServiceWorker() {
+    if (!('serviceWorker' in navigator)) {
+        console.log('❌ Service Worker not supported');
+        return;
+    }
     
-    //  BACKGROUND SYNC YANG BENAR 
-    // Pakai navigator.serviceWorker.ready
-    navigator.serviceWorker.ready.then(registration => {
-      if ('sync' in registration) {
-        registration.sync.register('sync-financial-data')
-          .then(() => console.log('✅ Background sync registered'))
-          .catch(err => console.log('⚠️ Sync registration failed:', err));
-      }
+    window.addEventListener('load', () => {
+        // Register Service Worker
+        navigator.serviceWorker.register('/financial-app/service-worker.js')
+            .then(registration => {
+                console.log('✅ Service Worker registered:', registration.scope);
+                setupSWUpdates(registration);
+                setupBackgroundSync();
+            })
+            .catch(error => {
+                console.error('❌ Service Worker registration failed:', error);
+            });
     });
-  });
 }
 
-// Function to show update notification
+function setupSWUpdates(registration) {
+    // Check for updates
+    registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        console.log('🔄 Service Worker update found!');
+        
+        newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('🔄 New content available!');
+                showUpdateNotification();
+            }
+        });
+    });
+}
+
+function setupBackgroundSync() {
+    // Background Sync
+    navigator.serviceWorker.ready
+        .then(registration => {
+            if ('sync' in registration) {
+                return registration.sync.register('sync-financial-data');
+            }
+            return Promise.reject('Sync API not available');
+        })
+        .then(() => console.log('✅ Background sync registered'))
+        .catch(err => console.log('⚠️ Background sync:', err));
+}
+
 function showUpdateNotification() {
-  if (confirm('🔄 Update tersedia! Muat ulang aplikasi?')) {
-    window.location.reload();
-  }
+    if (confirm('🔄 Update tersedia! Muat ulang aplikasi?')) {
+        window.location.reload();
+    }
 }
 
-// Function to trigger update
+// Check for updates periodically
 function checkForUpdates() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistration()
-      .then(registration => {
-        if (registration) {
-          registration.update();
-          console.log('🔄 Checking for updates...');
-        }
-      });
-  }
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration()
+            .then(registration => registration?.update())
+            .catch(console.error);
+    }
 }
 
-// Check for updates periodically (every 24 hours)
+// Initialize
+initServiceWorker();
 setInterval(checkForUpdates, 24 * 60 * 60 * 1000);
-
 // ========== 🏠 FUNGSI INISIALISASI ==========
 // ⭐⭐ REPLACE seluruh initializeApp() dengan ini: ⭐⭐
 function initializeApp() {
