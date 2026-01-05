@@ -535,73 +535,175 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ========== SERVICE WORKER REGISTRATION (FIXED) ==========
-function initServiceWorker() {
-    if (!('serviceWorker' in navigator)) {
-        console.log('❌ Service Worker not supported');
-        return;
+// Di service-worker.js - SOLUSI 2 (Cache API)
+
+const PENDING_DATA_CACHE = 'pending-data-v1';
+
+// Background sync handler
+self.addEventListener('sync', event => {
+    if (event.tag === 'sync-financial-data') {
+        console.log('🔄 Background sync triggered');
+        event.waitUntil(syncPendingData());
+    }
+});
+
+// Main sync function
+async function syncPendingData() {
+    try {
+        console.log('🔄 Starting background sync...');
+        
+        // 1. Get pending data from Cache
+        const pendingItems = await getPendingData();
+        
+        if (pendingItems.length === 0) {
+            console.log('✅ No pending data to sync');
+            return;
+        }
+        
+        console.log(`🔄 Syncing ${pendingItems.length} pending items...`);
+        
+        // 2. Try to sync each item
+        const results = [];
+        for (const item of pendingItems) {
+            try {
+                const result = await syncItemToServer(item);
+                results.push({ ...result, item });
+            } catch (error) {
+                console.log(`❌ Failed to sync item ${item.id}:`, error);
+                results.push({ success: false, error: error.message, item });
+            }
+        }
+        
+        // 3. Remove successful items
+        const successfulItems = results.filter(r => r.success);
+        if (successfulItems.length > 0) {
+            await removeSyncedItems(successfulItems.map(r => r.item.id));
+            console.log(`✅ ${successfulItems.length} items synced successfully`);
+        }
+        
+        // 4. Show notification
+        if (successfulItems.length > 0) {
+            self.registration.showNotification('Financial Masterplan', {
+                body: `✅ ${successfulItems.length} items synced`,
+                icon: '/financial-app/icons/icon-192x192.png',
+                tag: 'sync-complete'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Sync failed:', error);
+    }
+}
+
+// Get pending data from Cache
+async function getPendingData() {
+    try {
+        const cache = await caches.open(PENDING_DATA_CACHE);
+        const response = await cache.match('/pending-items');
+        
+        if (response) {
+            const data = await response.json();
+            return Array.isArray(data) ? data : [];
+        }
+        return [];
+    } catch (error) {
+        console.log('Error reading pending data:', error);
+        return [];
+    }
+}
+
+// Save data to Cache
+async function savePendingData(items) {
+    try {
+        const cache = await caches.open(PENDING_DATA_CACHE);
+        await cache.put('/pending-items', new Response(JSON.stringify(items)));
+    } catch (error) {
+        console.log('Error saving pending data:', error);
+    }
+}
+
+// Remove synced items
+async function removeSyncedItems(syncedIds) {
+    try {
+        const currentItems = await getPendingData();
+        const remainingItems = currentItems.filter(item => !syncedIds.includes(item.id));
+        await savePendingData(remainingItems);
+    } catch (error) {
+        console.log('Error removing synced items:', error);
+    }
+}
+
+// Simulate server sync (nanti diganti dengan Firebase)
+async function syncItemToServer(item) {
+    console.log('Syncing item:', item);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // For now, just simulate success
+    // TODO: Replace with actual Firebase/Fetch call
+    return { success: true, id: item.id, timestamp: Date.now() };
+}
+
+// Function to add pending data (call from main thread)
+async function addToPendingSync(data) {
+    const currentItems = await getPendingData();
+    const newItem = {
+        id: `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        data: data,
+        timestamp: Date.now(),
+        type: data.type || 'expense' // expense, income, etc.
+    };
+    
+    currentItems.push(newItem);
+    await savePendingData(currentItems);
+    
+    console.log('📝 Added to pending sync:', newItem);
+    return newItem.id;
+}
+
+// Di script-fixed.js - tambah fungsi untuk add pending data
+
+// Function to save data for offline sync
+async function saveForOfflineSync(data, type = 'expense') {
+    if (!navigator.onLine) {
+        console.log('📴 Offline - saving for later sync');
+        
+        // Save to localStorage sebagai fallback
+        const pending = JSON.parse(localStorage.getItem('offline_pending') || '[]');
+        pending.push({
+            ...data,
+            type: type,
+            offlineId: Date.now(),
+            savedAt: new Date().toISOString()
+        });
+        localStorage.setItem('offline_pending', JSON.stringify(pending));
+        
+        // Try to register background sync
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.sync.register('sync-financial-data');
+            });
+        }
+        
+        return { offline: true, id: data.offlineId };
     }
     
-    window.addEventListener('load', () => {
-        // Register Service Worker
-        navigator.serviceWorker.register('/financial-app/service-worker.js')
-            .then(registration => {
-                console.log('✅ Service Worker registered:', registration.scope);
-                setupSWUpdates(registration);
-                setupBackgroundSync();
-            })
-            .catch(error => {
-                console.error('❌ Service Worker registration failed:', error);
-            });
-    });
+    // Online - save langsung
+    return saveToServer(data);
 }
 
-function setupSWUpdates(registration) {
-    // Check for updates
-    registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        console.log('🔄 Service Worker update found!');
-        
-        newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('🔄 New content available!');
-                showUpdateNotification();
-            }
-        });
-    });
-}
-
-function setupBackgroundSync() {
-    // Background Sync
-    navigator.serviceWorker.ready
-        .then(registration => {
-            if ('sync' in registration) {
-                return registration.sync.register('sync-financial-data');
-            }
-            return Promise.reject('Sync API not available');
-        })
-        .then(() => console.log('✅ Background sync registered'))
-        .catch(err => console.log('⚠️ Background sync:', err));
-}
-
-function showUpdateNotification() {
-    if (confirm('🔄 Update tersedia! Muat ulang aplikasi?')) {
-        window.location.reload();
+// Check and sync pending data when back online
+window.addEventListener('online', () => {
+    console.log('🌐 Back online - checking pending data');
+    
+    const pending = JSON.parse(localStorage.getItem('offline_pending') || '[]');
+    if (pending.length > 0) {
+        if (confirm(`Anda memiliki ${pending.length} data offline. Sync sekarang?`)) {
+            syncOfflineData(pending);
+        }
     }
-}
-
-// Check for updates periodically
-function checkForUpdates() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistration()
-            .then(registration => registration?.update())
-            .catch(console.error);
-    }
-}
-
-// Initialize
-initServiceWorker();
-setInterval(checkForUpdates, 24 * 60 * 60 * 1000);
+});
 // ========== 🏠 FUNGSI INISIALISASI ==========
 // ⭐⭐ REPLACE seluruh initializeApp() dengan ini: ⭐⭐
 function initializeApp() {
