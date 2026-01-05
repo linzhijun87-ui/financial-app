@@ -9,24 +9,691 @@ let appSettings = {
     targetAmount: 300000000,
     timelineYears: 3
 };
+let currentTimeline = {
+    startDate: null,
+    endDate: null,
+    totalDays: 0,
+    createdAt: null,
+    lastUpdated: null
+};
 let currentView = 'dashboard';
 let selectedCategory = 'keluarga';
 let expenseChart = null;
 let monthlyTrendChart = null;
 let progressChart = null;
 let incomeChart = null;
+let checklistItems = JSON.parse(localStorage.getItem('financial_checklist') || '[]');
+
+// ========== ⏰ SISTEM TIMELINE BARU ==========
+// ⭐⭐ LETAKKAN INI SEBELUM fungsi initializeApp() ⭐⭐
+
+function initTimelineSystem() {
+    console.log("⏰ Initializing New Timeline System...");
+    
+    // Load dari localStorage
+    const savedTimeline = localStorage.getItem('financial_timeline');
+    
+    if (savedTimeline) {
+        try {
+            currentTimeline = JSON.parse(savedTimeline);
+            console.log("✅ Timeline loaded:", currentTimeline);
+        } catch (e) {
+            console.warn("❌ Error loading timeline, creating default");
+            createDefaultTimeline();
+        }
+    } else {
+        console.log("📅 No saved timeline, creating default");
+        createDefaultTimeline();
+    }
+    
+    // ⭐⭐ VALIDASI: Pastikan endDate ada ⭐⭐
+    if (!currentTimeline.endDate) {
+        console.warn("⚠️ Timeline missing endDate, recreating...");
+        createDefaultTimeline();
+    }
+    
+    console.log("🎯 Final timeline:", currentTimeline);
+    
+    return currentTimeline;
+}
+
+function actuallyInitTimeline() {
+    console.log("🏗️ DOM ready, initializing timeline...");
+    
+    // 1. Load dari localStorage
+    const savedTimeline = localStorage.getItem('financial_timeline');
+    
+    if (savedTimeline) {
+        try {
+            currentTimeline = JSON.parse(savedTimeline);
+            console.log("✅ Timeline loaded:", currentTimeline);
+        } catch (e) {
+            console.warn("❌ Error loading timeline, creating default");
+            createDefaultTimeline();
+        }
+    } else {
+        createDefaultTimeline();
+    }
+    
+    // 2. Setup event listeners untuk input
+    setupTimelineInputListeners();
+    
+    // 3. Update UI
+    updateTimelineUI();
+    
+    console.log("🎯 Timeline system ready");
+}
+
+function createDefaultTimeline() {
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setFullYear(endDate.getFullYear() + 3);
+    
+    currentTimeline = {
+        startDate: today.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        totalDays: calculateTotalDays(today, endDate),
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    };
+    
+    saveTimelineToStorage();
+    console.log("📅 Default timeline created");
+}
+
+function calculateTotalDays(startDate, endDate) {
+    try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        
+        const diffMs = end - start;
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        
+        return Math.max(0, diffDays);
+    } catch (e) {
+        console.error("Error in calculateTotalDays:", e);
+        return 0;
+    }
+}
+
+function calculateRemainingDays() {
+    // ⭐⭐ VALIDASI DULU ⭐⭐
+    if (!currentTimeline || !currentTimeline.endDate) {
+        console.warn("⚠️ [calculateRemainingDays] No timeline end date");
+        return 1095; // Default 3 tahun dalam hari
+    }
+    
+    const end = new Date(currentTimeline.endDate);
+    const now = new Date();
+    
+    // Reset ke midnight
+    end.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    
+    const diffMs = end - now;
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, diffDays);
+}
+
+function calculateTimelineProgress() {
+    if (!currentTimeline.startDate || !currentTimeline.endDate) return 0;
+    
+    const start = new Date(currentTimeline.startDate);
+    const end = new Date(currentTimeline.endDate);
+    const now = new Date();
+    
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    
+    const totalMs = end - start;
+    const passedMs = now - start;
+    
+    if (totalMs <= 0) return 100;
+    return Math.min(100, Math.max(0, (passedMs / totalMs) * 100));
+}
+
+function saveTimelineToStorage() {
+    localStorage.setItem('financial_timeline', JSON.stringify(currentTimeline));
+    console.log("💾 Timeline saved to storage");
+}
+
+// ⭐⭐⭐ FUNGSI UTAMA SAVE TIMELINE ⭐⭐⭐
+function saveTimeline() {
+    console.log("💾 saveTimeline() called");
+    
+    // METHOD 1: Cari element dengan cara yang lebih robust
+    let startInput, endInput;
+    
+    // Coba beberapa cara untuk dapatkan element
+    startInput = document.getElementById('start-date');
+    endInput = document.getElementById('end-date');
+    
+    // Jika tidak ketemu dengan getElementById, coba querySelector
+    if (!startInput) startInput = document.querySelector('input#start-date');
+    if (!endInput) endInput = document.querySelector('input#end-date');
+    
+    // Jika masih tidak ketemu, coba cari di tab settings
+    if (!startInput || !endInput) {
+        const settingsTab = document.getElementById('tab-settings');
+        if (settingsTab) {
+            if (!startInput) startInput = settingsTab.querySelector('#start-date');
+            if (!endInput) endInput = settingsTab.querySelector('#end-date');
+        }
+    }
+    
+    // ⭐⭐ DEBUG: Tampilkan apa yang ditemukan ⭐⭐
+    console.log("🔍 Element search results:", {
+        startInput: startInput,
+        endInput: endInput,
+        startValue: startInput ? startInput.value : 'NOT FOUND',
+        endValue: endInput ? endInput.value : 'NOT FOUND'
+    });
+    
+    // ⭐⭐ VALIDASI: Jika element tidak ditemukan ⭐⭐
+    if (!startInput || !endInput) {
+        const errorMsg = `❌ Timeline input elements not found!\n` +
+                        `Looking for: #start-date, #end-date\n` +
+                        `Current tab: ${currentView}\n` +
+                        `DOM ready: ${document.readyState}`;
+        
+        console.error(errorMsg);
+        
+        // Coba buka tab settings dulu
+        if (currentView !== 'settings') {
+            showTab('settings');
+            setTimeout(saveTimeline, 500); // Coba lagi setelah 500ms
+            return;
+        }
+        
+        showAlert('error', 'Form timeline tidak ditemukan. Coba refresh halaman atau buka tab Settings dulu.');
+        return;
+    }
+    
+    // ⭐⭐ VALIDASI INPUT ⭐⭐
+    if (!startInput.value || !endInput.value) {
+        showAlert('warning', 'Harap isi tanggal mulai dan tanggal target');
+        return;
+    }
+    
+    const start = new Date(startInput.value);
+    const end = new Date(endInput.value);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        showAlert('warning', 'Format tanggal tidak valid');
+        return;
+    }
+    
+    if (end <= start) {
+        showAlert('warning', 'Tanggal target harus setelah tanggal mulai');
+        return;
+    }
+    
+    // ⭐⭐ SIMPAN DATA ⭐⭐
+    currentTimeline.startDate = startInput.value;
+    currentTimeline.endDate = endInput.value;
+    currentTimeline.totalDays = calculateTotalDays(startInput.value, endInput.value);
+    currentTimeline.lastUpdated = new Date().toISOString();
+    
+    localStorage.setItem('financial_timeline', JSON.stringify(currentTimeline));
+    
+    console.log("✅ Timeline saved:", currentTimeline);
+    
+    // ⭐⭐ UPDATE UI ⭐⭐
+    updateHeaderRemainingDays();
+    updateTimelineDisplay();
+    
+    showAlert('success', 
+        `Timeline disimpan!\n` +
+        `Mulai: ${formatDate(currentTimeline.startDate)}\n` +
+        `Target: ${formatDate(currentTimeline.endDate)}\n` +
+        `Total: ${currentTimeline.totalDays} hari`
+    );
+    
+    // Update dashboard
+    updateDashboard();
+}
+
+
+function updateTimelineUI() {
+    console.log("🔄 Updating timeline UI...");
+    
+    // Tunggu sedikit untuk pastikan DOM ready
+    setTimeout(() => {
+        const startInput = document.getElementById('start-date');
+        const endInput = document.getElementById('end-date');
+        
+        if (startInput && currentTimeline.startDate) {
+            startInput.value = currentTimeline.startDate;
+            console.log("✅ Set start-date to:", currentTimeline.startDate);
+        }
+        
+        if (endInput && currentTimeline.endDate) {
+            endInput.value = currentTimeline.endDate;
+            console.log("✅ Set end-date to:", currentTimeline.endDate);
+        }
+        
+        // Update display
+        updateTimelineDisplay();
+        
+    }, 100);
+}
+
+
+function updateTimelineDisplay() {
+    console.log("🔄 [updateTimelineDisplay] START");
+    
+    // Gunakan setTimeout untuk pastikan DOM ready
+    setTimeout(() => {
+        try {
+            // ===== 1. GET ELEMENTS DENGAN SAFETY CHECK =====
+            const startDisplayEl = document.getElementById('display-start-date');
+            const endDisplayEl = document.getElementById('display-end-date');
+            const daysDisplayEl = document.getElementById('display-days-left');
+            const progressDisplayEl = document.getElementById('display-timeline-progress');
+            
+            console.log("🔍 [updateTimelineDisplay] Elements found:", {
+                startDisplay: !!startDisplayEl,
+                endDisplay: !!endDisplayEl,
+                daysDisplay: !!daysDisplayEl,
+                progressDisplay: !!progressDisplayEl
+            });
+            
+            // ===== 2. VALIDASI DATA TIMELINE =====
+            if (!currentTimeline || !currentTimeline.startDate || !currentTimeline.endDate) {
+                console.warn("⚠️ [updateTimelineDisplay] Timeline data incomplete:", currentTimeline);
+                
+                // Set default values jika data tidak ada
+                if (startDisplayEl) startDisplayEl.textContent = '-';
+                if (endDisplayEl) endDisplayEl.textContent = '-';
+                if (daysDisplayEl) daysDisplayEl.textContent = '0';
+                if (progressDisplayEl) progressDisplayEl.textContent = '0%';
+                
+                return;
+            }
+            
+            // ===== 3. HITUNG VALUES =====
+            const daysLeft = calculateRemainingDays();
+            const progress = calculateTimelineProgress();
+            
+            console.log("📊 [updateTimelineDisplay] Calculated values:", {
+                daysLeft: daysLeft,
+                progress: progress
+            });
+            
+            // ===== 4. UPDATE ELEMENTS (DENGAN VALIDASI) =====
+            // Start Date
+            if (startDisplayEl) {
+                try {
+                    startDisplayEl.textContent = formatDate(currentTimeline.startDate);
+                } catch (e) {
+                    console.error("❌ Error updating start date:", e);
+                    startDisplayEl.textContent = currentTimeline.startDate;
+                }
+            }
+            
+            // End Date
+            if (endDisplayEl) {
+                try {
+                    endDisplayEl.textContent = formatDate(currentTimeline.endDate);
+                } catch (e) {
+                    console.error("❌ Error updating end date:", e);
+                    endDisplayEl.textContent = currentTimeline.endDate;
+                }
+            }
+            
+            // Days Left
+            if (daysDisplayEl) {
+                daysDisplayEl.textContent = daysLeft;
+                
+                // Warna berdasarkan urgency
+                if (daysLeft > 365) {
+                    daysDisplayEl.style.color = '#2ecc71';
+                } else if (daysLeft > 180) {
+                    daysDisplayEl.style.color = '#f39c12';
+                } else if (daysLeft > 90) {
+                    daysDisplayEl.style.color = '#e67e22';
+                } else {
+                    daysDisplayEl.style.color = '#e74c3c';
+                }
+            }
+            
+            // Progress
+            if (progressDisplayEl) {
+                progressDisplayEl.textContent = progress.toFixed(1) + '%';
+                
+                // Warna berdasarkan progress
+                if (progress >= 100) {
+                    progressDisplayEl.style.color = '#2ecc71';
+                } else if (progress >= 75) {
+                    progressDisplayEl.style.color = '#27ae60';
+                } else if (progress >= 50) {
+                    progressDisplayEl.style.color = '#f39c12';
+                } else if (progress >= 25) {
+                    progressDisplayEl.style.color = '#3498db';
+                } else {
+                    progressDisplayEl.style.color = '#e74c3c';
+                }
+            }
+            
+            console.log("✅ [updateTimelineDisplay] COMPLETED");
+            
+        } catch (error) {
+            console.error("❌ [updateTimelineDisplay] CRITICAL ERROR:", error);
+            
+            // Emergency fallback
+            try {
+                const daysEl = document.getElementById('display-days-left');
+                if (daysEl) daysEl.textContent = 'Error';
+            } catch (e) {
+                console.error("Even fallback failed:", e);
+            }
+        }
+    }, 100); // Delay untuk pastikan DOM siap
+}
+
+function updateTimelinePreview() {
+    const daysLeft = calculateRemainingDays();
+    const progress = calculateTimelineProgress();
+    const totalDays = currentTimeline.totalDays || 0;
+    
+    // Format durasi
+    let durationText = '';
+    if (totalDays >= 365) {
+        const years = Math.floor(totalDays / 365);
+        const months = Math.floor((totalDays % 365) / 30);
+        durationText = `${years} tahun`;
+        if (months > 0) durationText += ` ${months} bulan`;
+    } else if (totalDays >= 30) {
+        const months = Math.floor(totalDays / 30);
+        const days = totalDays % 30;
+        durationText = `${months} bulan`;
+        if (days > 0) durationText += ` ${days} hari`;
+    } else {
+        durationText = `${totalDays} hari`;
+    }
+    
+    // Update elements
+    const elements = {
+        'preview-duration': durationText,
+        'preview-days-left': daysLeft,
+        'preview-progress': progress.toFixed(1) + '%'
+    };
+    
+    Object.entries(elements).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    });
+}
+
+// ⭐⭐⭐ HELPER FUNCTIONS ⭐⭐⭐
+function setQuickTimeline(years) {
+    const today = new Date();
+    const startDate = new Date(today);
+    const endDate = new Date(today);
+    
+    // Mulai dari hari ini
+    startDate.setDate(today.getDate());
+    endDate.setFullYear(today.getFullYear() + years);
+    
+    document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+    
+    // Validasi
+    validateTimelineInput();
+}
+
+function setQuickTimelineFromToday() {
+    const today = new Date();
+    document.getElementById('start-date').value = today.toISOString().split('T')[0];
+    
+    // Auto-set 3 tahun dari sekarang
+    const endDate = new Date(today);
+    endDate.setFullYear(endDate.getFullYear() + 3);
+    document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+    
+    validateTimelineInput();
+}
+
+function validateTimelineInput() {
+    const startInput = document.getElementById('start-date');
+    const endInput = document.getElementById('end-date');
+    const validationDiv = document.getElementById('timeline-validation');
+    
+    if (!startInput || !endInput || !validationDiv) return;
+    
+    if (!startInput.value || !endInput.value) {
+        validationDiv.style.display = 'none';
+        return;
+    }
+    
+    const start = new Date(startInput.value);
+    const end = new Date(endInput.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let message = '';
+    let type = 'info';
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        message = '❌ Format tanggal tidak valid';
+        type = 'error';
+    } else if (end <= start) {
+        message = '❌ Tanggal target harus setelah tanggal mulai';
+        type = 'error';
+    } else if (start > today) {
+        message = '⚠️ Tanggal mulai di masa depan';
+        type = 'warning';
+    } else {
+        const totalDays = calculateTotalDays(startInput.value, endInput.value);
+        const years = Math.floor(totalDays / 365);
+        const months = Math.floor((totalDays % 365) / 30);
+        
+        let durationText = '';
+        if (years > 0) {
+            durationText = `${years} tahun`;
+            if (months > 0) durationText += ` ${months} bulan`;
+        } else {
+            durationText = `${totalDays} hari`;
+        }
+        
+        message = `✅ Durasi: ${durationText}`;
+        type = 'success';
+    }
+    
+    validationDiv.innerHTML = message;
+    validationDiv.style.display = 'block';
+    validationDiv.className = `timeline-validation timeline-${type}`;
+}
+
+
+function resetToDefaultTimeline() {
+    if (!confirm('Reset timeline ke default (3 tahun dari hari ini)?')) return;
+    
+    createDefaultTimeline();
+    updateTimelineUI();
+    updateTimelinePreview();
+    updateHeaderRemainingDays();
+    
+    showAlert('success', 'Timeline direset ke 3 tahun dari hari ini');
+}
+
+// Event listeners untuk real-time validation
+document.addEventListener('DOMContentLoaded', function() {
+    const startInput = document.getElementById('start-date');
+    const endInput = document.getElementById('end-date');
+    
+    if (startInput) {
+        startInput.addEventListener('change', validateTimelineInput);
+    }
+    if (endInput) {
+        endInput.addEventListener('change', validateTimelineInput);
+    }
+});
+
+// Di script-fixed.js atau sebelum initializeApp()
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/financial-app/service-worker.js')
+      .then(function(registration) {
+        console.log('✅ ServiceWorker registered:', registration.scope);
+        
+        // Check for updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          console.log('🔄 ServiceWorker update found!');
+          
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('🔄 New content available!');
+              // Show update notification to user
+              showUpdateNotification();
+            }
+          });
+        });
+      })
+      .catch(function(err) {
+        console.log('❌ ServiceWorker registration failed:', err);
+      });
+  });
+  
+  // Background sync registration
+  if ('sync' in registration) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.sync.register('sync-financial-data')
+        .then(() => console.log('✅ Background sync registered'))
+        .catch(err => console.log('❌ Sync registration failed:', err));
+    });
+  }
+}
+
+// Function to show update notification
+function showUpdateNotification() {
+  if (confirm('🔄 Update tersedia! Muat ulang aplikasi?')) {
+    window.location.reload();
+  }
+}
+
+// Function to trigger update
+function checkForUpdates() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistration()
+      .then(registration => {
+        if (registration) {
+          registration.update();
+          console.log('🔄 Checking for updates...');
+        }
+      });
+  }
+}
+
+// Check for updates periodically (every 24 hours)
+setInterval(checkForUpdates, 24 * 60 * 60 * 1000);
 
 // ========== 🏠 FUNGSI INISIALISASI ==========
 // ⭐⭐ REPLACE seluruh initializeApp() dengan ini: ⭐⭐
 function initializeApp() {
-    // TUNGGU sampai DOM benar-benar ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            actuallyInitializeApp();
-        });
-    } else {
-        actuallyInitializeApp();
+    console.log('🚀 Financial Masterplan PRO - Initializing...');
+    
+    // ⭐⭐ CEK JIKA SUDAH DI-INITIALIZE ⭐⭐
+    if (window.appInitialized) {
+        console.log('⚠️ App sudah di-init, skip...');
+        return;
     }
+    
+    try {
+        // 1. Mark as initialized
+        window.appInitialized = true;
+        
+        // 2. Inisialisasi timeline system
+        initTimelineSystem();
+        
+        // 3. Load data lainnya
+        loadFromLocalStorage();
+        
+        // 4. Setup event listeners
+        setupEventListeners();
+        
+        // 5. Set tanggal default untuk form
+        const today = new Date().toISOString().split('T')[0];
+        const expenseDateInput = document.getElementById('expense-date');
+        const incomeDateInput = document.getElementById('income-date');
+        
+        if (expenseDateInput) expenseDateInput.value = today;
+        if (incomeDateInput) incomeDateInput.value = today;
+        
+        // 6. Update UI awal
+        updateDashboard();
+        showTab('dashboard');
+        
+        // 7. Setup charts - HAPUS TIMEOUT, langsung jalankan
+        if (document.getElementById('expenseChart')) {
+            updateExpenseChart();
+        }
+        
+        // 8. Update header
+        updateHeaderTarget();
+        
+        // 9. Setup daily checker
+        setupDailyChecker();
+        
+        console.log('✅ Aplikasi siap digunakan!');
+        
+    } catch (error) {
+        console.error('❌ Error during initialization:', error);
+        // Jangan alert, bisa ganggu UX
+    }
+}
+
+function safeSaveTimeline() {
+    console.log("🛡️ [safeSaveTimeline] START - Current tab:", currentView);
+    
+    // Jika belum di tab settings, buka dulu
+    if (currentView !== 'settings') {
+        console.log("📂 [safeSaveTimeline] Opening settings tab first...");
+        showTab('settings');
+        
+        // Tunggu tab render, lalu save
+        setTimeout(() => {
+            console.log("⏳ [safeSaveTimeline] Now executing saveTimeline()...");
+            saveTimeline();
+        }, 400); // 400ms cukup untuk DOM render
+        
+        return;
+    }
+    
+    // Jika sudah di settings, save langsung
+    console.log("✅ [safeSaveTimeline] Already in settings, saving directly");
+    saveTimeline();
+}
+
+// Safe wrapper untuk saveSettings
+function safeSaveSettings() {
+    console.log("🛡️ [safeSaveSettings] SIMPLE VERSION");
+    
+    // Cek apakah di tab settings
+    if (currentView !== 'settings') {
+        console.log("📂 Opening settings tab...");
+        
+        // Buka tab settings
+        showTab('settings');
+        
+        // Tunggu 500ms lalu save
+        setTimeout(() => {
+            console.log("⏰ Now saving...");
+            saveSettings();
+        }, 500);
+        
+        return;
+    }
+    
+    // Jika sudah di settings, save langsung
+    console.log("✅ Already in settings, saving...");
+    saveSettings();
 }
 
 function actuallyInitializeApp() {
@@ -63,6 +730,369 @@ function actuallyInitializeApp() {
         console.error('❌ Error during initialization:', error);
         alert("Terjadi kesalahan inisialisasi. Buka console untuk detail.");
     }
+}
+
+// ===== SIMPLE TIMELINE SYSTEM =====
+const timeline = {
+    startDate: null,
+    endDate: null,
+    mode: 'fixed' // 'fixed' atau 'dynamic'
+};
+
+function initTimeline() {
+    console.log("⏰ Initializing Simple Timeline...");
+    
+    // Load dari localStorage
+    const saved = localStorage.getItem('timelineData');
+    if (saved) {
+        Object.assign(timeline, JSON.parse(saved));
+    } else {
+        // Default: 3 tahun dari hari ini
+        const today = new Date();
+        const endDate = new Date(today);
+        endDate.setFullYear(endDate.getFullYear() + 3);
+        
+        timeline.startDate = today.toISOString().split('T')[0];
+        timeline.endDate = endDate.toISOString().split('T')[0];
+        timeline.mode = 'fixed';
+        
+        saveTimelineData();
+    }
+    
+    // Update UI
+    updateTimelineUI();
+    updateCountdown();
+}
+
+function saveTimelineData() {
+    localStorage.setItem('timelineData', JSON.stringify(timeline));
+}
+
+function calculateDaysLeft() {
+    if (!timeline.endDate) return 0;
+    
+    const end = new Date(timeline.endDate);
+    const now = new Date();
+    
+    // Reset ke midnight
+    end.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    
+    const diffMs = end - now;
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, diffDays);
+}
+
+function calculateProgress() {
+    if (!timeline.startDate || !timeline.endDate) return 0;
+    
+    const start = new Date(timeline.startDate);
+    const end = new Date(timeline.endDate);
+    const now = new Date();
+    
+    const totalMs = end - start;
+    const passedMs = now - start;
+    
+    return totalMs > 0 ? Math.min(100, Math.max(0, (passedMs / totalMs * 100))) : 0;
+}
+
+function updateCountdown() {
+    const daysLeft = calculateDaysLeft();
+    const progress = calculateProgress();
+    
+    // Update header
+    const daysEl = document.getElementById('days-left');
+    const targetEl = document.getElementById('target-date-display');
+    
+    if (daysEl) {
+        daysEl.textContent = daysLeft;
+        
+        // Simple color coding
+        if (daysLeft <= 30) daysEl.style.color = '#e74c3c';
+        else if (daysLeft <= 90) daysEl.style.color = '#f39c12';
+        else daysEl.style.color = '#27ae60';
+    }
+    
+    if (targetEl && timeline.endDate) {
+        targetEl.textContent = `Target: ${formatDate(timeline.endDate)}`;
+    }
+    
+    // Update progress bar
+    const progressBar = document.getElementById('main-progress-bar');
+    const progressText = document.getElementById('main-progress-text');
+    
+    if (progressBar) {
+        progressBar.style.width = progress + '%';
+    }
+    
+    if (progressText) {
+        progressText.textContent = progress.toFixed(1) + '%';
+    }
+    
+    console.log(`⏰ Timeline: ${daysLeft} days left, ${progress.toFixed(1)}% progress`);
+}
+
+function saveTimeline() {
+    console.log("💾 [saveTimeline] START - Current tab:", currentView);
+    
+    // ===== 1. VALIDASI TAB AKTIF =====
+    const settingsTab = document.getElementById('tab-settings');
+    const isSettingsActive = settingsTab && settingsTab.classList.contains('active');
+    
+    if (!isSettingsActive) {
+        console.error("❌ [saveTimeline] ERROR: Called from wrong tab!");
+        console.log("   Current tab ID:", currentView);
+        console.log("   Settings tab active?", isSettingsActive);
+        
+        // Auto-correct: Redirect to safe version
+        console.log("   ↳ Redirecting to safeSaveTimeline()...");
+        safeSaveTimeline();
+        return;
+    }
+    
+    // ===== 2. GET INPUT ELEMENTS DENGAN MULTIPLE METHODS =====
+    let startInput, endInput;
+    
+    // Method 1: Direct getElementById (primary)
+    startInput = document.getElementById('start-date');
+    endInput = document.getElementById('end-date');
+    
+    // Method 2: Query within settings tab (fallback)
+    if (!startInput || !endInput) {
+        console.warn("⚠️ [saveTimeline] Inputs not found by ID, trying querySelector...");
+        startInput = document.querySelector('input#start-date');
+        endInput = document.querySelector('input#end-date');
+    }
+    
+    // Method 3: Force search in settings tab
+    if (!startInput || !endInput) {
+        if (settingsTab) {
+            console.warn("⚠️ [saveTimeline] Searching within settings tab...");
+            startInput = settingsTab.querySelector('#start-date');
+            endInput = settingsTab.querySelector('#end-date');
+        }
+    }
+    
+    // ===== 3. VALIDASI ELEMENTS =====
+    if (!startInput || !endInput) {
+        const errorDetails = {
+            startInput: startInput,
+            endInput: endInput,
+            settingsTab: settingsTab,
+            tabContent: document.querySelector('.tab-content.active')?.id
+        };
+        
+        console.error("❌ [saveTimeline] CRITICAL: Input elements not found!", errorDetails);
+        
+        // Emergency fix: Try again after delay
+        setTimeout(() => {
+            console.log("🔄 [saveTimeline] Retrying after timeout...");
+            saveTimeline();
+        }, 200);
+        
+        showAlert('error', 'Form tidak ditemukan. Coba lagi atau refresh halaman.');
+        return;
+    }
+    
+    console.log("✅ [saveTimeline] Input elements FOUND:", {
+        startValue: startInput.value,
+        endValue: endInput.value
+    });
+    
+    // ===== 4. VALIDASI INPUT VALUES =====
+    if (!startInput.value || !endInput.value) {
+        showAlert('warning', 'Harap isi tanggal mulai dan tanggal target');
+        
+        // Highlight empty fields
+        if (!startInput.value) {
+            startInput.style.border = '2px solid #e74c3c';
+            startInput.focus();
+        } else if (!endInput.value) {
+            endInput.style.border = '2px solid #e74c3c';
+            endInput.focus();
+        }
+        
+        return;
+    }
+    
+    // Reset border if was red
+    startInput.style.border = '';
+    endInput.style.border = '';
+    
+    // ===== 5. VALIDASI TANGGAL =====
+    const start = new Date(startInput.value);
+    const end = new Date(endInput.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check valid dates
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        showAlert('warning', 'Format tanggal tidak valid');
+        return;
+    }
+    
+    // Check start <= end
+    if (end <= start) {
+        showAlert('warning', 'Tanggal target harus SETELAH tanggal mulai');
+        
+        // Auto-swap if user might have reversed them
+        if (confirm('Tanggal terbalik. Tukar tanggal mulai dan target?')) {
+            const temp = startInput.value;
+            startInput.value = endInput.value;
+            endInput.value = temp;
+            saveTimeline(); // Recursive call with swapped values
+        }
+        return;
+    }
+    
+    // Check if start date is in future
+    if (start > today) {
+        if (!confirm('⚠️ Tanggal mulai di masa depan.\nApakah Anda yakin?')) {
+            return;
+        }
+    }
+    
+    // Check if end date is too far (100 years)
+    const hundredYears = new Date();
+    hundredYears.setFullYear(hundredYears.getFullYear() + 100);
+    if (end > hundredYears) {
+        if (!confirm('⚠️ Tanggal target lebih dari 100 tahun!\nApakah ini benar?')) {
+            return;
+        }
+    }
+    
+    // ===== 6. HITUNG TOTAL HARI =====
+    const totalDays = calculateTotalDays(startInput.value, endInput.value);
+    
+    if (totalDays <= 0) {
+        showAlert('warning', 'Durasi timeline tidak valid');
+        return;
+    }
+    
+    // ===== 7. SIMPAN KE TIMELINE OBJECT =====
+    currentTimeline = {
+        startDate: startInput.value,
+        endDate: endInput.value,
+        totalDays: totalDays,
+        createdAt: currentTimeline.createdAt || new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    };
+    
+    // ===== 8. SIMPAN KE LOCALSTORAGE =====
+    try {
+        localStorage.setItem('financial_timeline', JSON.stringify(currentTimeline));
+        console.log("💾 [saveTimeline] Saved to localStorage:", currentTimeline);
+    } catch (e) {
+        console.error("❌ [saveTimeline] localStorage error:", e);
+        showAlert('error', 'Gagal menyimpan. Storage mungkin penuh.');
+        return;
+    }
+    
+    // ===== 9. UPDATE UI =====
+    updateHeaderRemainingDays();
+    updateTimelineDisplay();
+    updateTimelinePreview();
+    
+    // Update dashboard untuk perhitungan kebutuhan bulanan baru
+    updateDashboard();
+    
+    // ===== 10. TAMPILKAN KONFIRMASI =====
+    const durationText = totalDays >= 365 
+        ? `${Math.floor(totalDays/365)} tahun ${totalDays%365} hari`
+        : `${totalDays} hari`;
+    
+    showAlert('success', 
+        `✅ TIMELINE DISIMPAN\n\n` +
+        `📅 Mulai: ${formatDate(currentTimeline.startDate)}\n` +
+        `🎯 Target: ${formatDate(currentTimeline.endDate)}\n` +
+        `⏳ Durasi: ${durationText}\n` +
+        `📊 Sisa: ${calculateRemainingDays()} hari`
+    );
+    
+    console.log("✅ [saveTimeline] COMPLETED successfully");
+}
+
+function updateTimelineUI() {
+    const startInput = document.getElementById('start-date');
+    const endInput = document.getElementById('end-date');
+    const modeSelect = document.getElementById('timeline-mode');
+    
+    if (startInput) startInput.value = timeline.startDate;
+    if (endInput) endInput.value = timeline.endDate;
+    if (modeSelect) modeSelect.value = timeline.mode;
+    
+    // Update preview
+    updatePreview();
+}
+
+function setupTimelineInputListeners() {
+    // Tunggu DOM siap
+    setTimeout(() => {
+        const startInput = document.getElementById('start-date');
+        const endInput = document.getElementById('end-date');
+        
+        if (startInput) {
+            startInput.addEventListener('change', function() {
+                console.log("📅 Start date changed:", this.value);
+                validateTimelineInput();
+            });
+        }
+        
+        if (endInput) {
+            endInput.addEventListener('change', function() {
+                console.log("🎯 End date changed:", this.value);
+                validateTimelineInput();
+            });
+        }
+        
+        console.log("✅ Timeline input listeners setup");
+    }, 200);
+}
+
+
+function updatePreview() {
+    const daysLeft = calculateDaysLeft();
+    const progress = calculateProgress();
+    
+    // Hitung durasi dalam tahun/bulan
+    if (timeline.startDate && timeline.endDate) {
+        const start = new Date(timeline.startDate);
+        const end = new Date(timeline.endDate);
+        const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+        
+        let durationText = '';
+        if (diffMonths >= 24) {
+            durationText = `${Math.floor(diffMonths / 12)} tahun ${diffMonths % 12} bulan`;
+        } else {
+            durationText = `${diffMonths} bulan`;
+        }
+        
+        const durationEl = document.getElementById('preview-duration');
+        if (durationEl) durationEl.textContent = durationText;
+    }
+    
+    const daysEl = document.getElementById('preview-days-left');
+    const progressEl = document.getElementById('preview-progress');
+    
+    if (daysEl) daysEl.textContent = daysLeft;
+    if (progressEl) progressEl.textContent = progress.toFixed(1) + '%';
+}
+
+function resetToDefault() {
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setFullYear(endDate.getFullYear() + 3);
+    
+    timeline.startDate = today.toISOString().split('T')[0];
+    timeline.endDate = endDate.toISOString().split('T')[0];
+    timeline.mode = 'fixed';
+    
+    saveTimelineData();
+    updateTimelineUI();
+    updateCountdown();
+    
+    alert('🔄 Timeline direset ke 3 tahun dari hari ini');
 }
 
 // ⭐⭐ FUNGSI UNTUK DAILY CHECKER ⭐⭐
@@ -135,30 +1165,43 @@ function loadFromLocalStorage() {
         const savedIncome = localStorage.getItem('financial_income');
         const savedSettings = localStorage.getItem('financial_settings');
         const savedChecklist = localStorage.getItem('financial_checklist');
-        
+        checklistItems = savedChecklist ? JSON.parse(savedChecklist) : [];
+
         expenses = savedExpenses ? JSON.parse(savedExpenses) : [];
         incomeRecords = savedIncome ? JSON.parse(savedIncome) : [];
         appSettings = savedSettings ? JSON.parse(savedSettings) : {
-            targetAmount: 300000000,
-            timelineYears: 3
+            targetAmount: 300000000
+            // ⭐⭐ HAPUS timelineYears ⭐⭐
         };
-
-        // ⭐⭐ UPDATE HEADER SETELAH LOAD DATA ⭐⭐
-        updateHeaderTarget();        // 1. Target di header 🎯
-        updateHeaderRemainingDays(); // 2. Sisa hari di header 📅
         
+        console.log("📂 Data loaded:", {
+            expenses: expenses.length,
+            income: incomeRecords.length,
+            target: appSettings.targetAmount
+        });
+        
+        // ⭐⭐ TIMELINE SUDAH DI INIT DI initTimelineSystem() ⭐⭐
+        // Jadi tidak perlu init lagi di sini
+        
+        // Update header
+        updateHeaderTarget();
+        
+        // ⭐⭐ TUNDA updateHeaderRemainingDays() sedikit ⭐⭐
+        // Biarkan timeline system init dulu
+        setTimeout(() => {
+            updateHeaderRemainingDays();
+        }, 100);
+        
+        // Update UI lainnya
         if (currentView === 'dashboard') updateDashboardTitle();
         if (currentView === 'investments') updateSimulationTitle();
         
-        // Update UI dengan data yang di-load
-        // updateDashboard(); // ⭐ KALAU INI DICOMMENT, BIARKAN SAJA
         renderExpenseList();
         renderIncomeList();
         updateDashboardTitle();
         
-        console.log('📂 Data loaded from localStorage');
     } catch (error) {
-        console.error('Error loading data:', error);
+        console.error("Error loading data:", error);
     }
 }
 
@@ -167,6 +1210,7 @@ function saveToLocalStorage() {
         localStorage.setItem('financial_expenses', JSON.stringify(expenses));
         localStorage.setItem('financial_income', JSON.stringify(incomeRecords));
         localStorage.setItem('financial_settings', JSON.stringify(appSettings));
+        localStorage.setItem('financial_checklist', JSON.stringify(checklistItems));
         console.log('💾 Data saved to localStorage');
     } catch (error) {
         console.error('Error saving data:', error);
@@ -289,55 +1333,262 @@ function initializeProgressChart() {
 
 // ========== 📊 FUNGSI DASHBOARD & UI ==========
 function showTab(tabId) {
-    // Sembunyikan semua tab
+    console.log(`📱 [showTab] Switching to tab: "${tabId}"`);
+    
+    // ===== 1. VALIDASI INPUT =====
+    const validTabs = ['dashboard', 'expenses', 'income', 'checklists', 'investments', 'settings'];
+    if (!validTabs.includes(tabId)) {
+        console.error(`❌ [showTab] Invalid tab ID: "${tabId}"`);
+        return;
+    }
+    
+    // ===== 2. SEMBUNYIKAN SEMUA TAB =====
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
+        tab.style.opacity = '0';
+        tab.style.transition = 'opacity 0.3s ease';
     });
     
-    // Non-aktifkan semua nav item
+    // ===== 3. NON-AKTIFKAN SEMUA NAV ITEM =====
     document.querySelectorAll('.nav-item').forEach(nav => {
         nav.classList.remove('active');
+        // nav.style.opacity = '1';
+        nav.style.transform = 'scale(0.95)';
+        nav.style.transition = 'all 0.3s ease';
     });
     
-    // Aktifkan tab yang dipilih
-    document.getElementById(`tab-${tabId}`).classList.add('active');
+    // ===== 4. AKTIFKAN TAB YANG DIPILIH =====
+    const targetTab = document.getElementById(`tab-${tabId}`);
+    if (!targetTab) {
+        console.error(`❌ [showTab] Target tab not found: "tab-${tabId}"`);
+        
+        // Fallback: coba aktifkan dashboard
+        if (tabId !== 'dashboard') {
+            console.log(`   ↳ Falling back to dashboard...`);
+            showTab('dashboard');
+        }
+        return;
+    }
     
-    // Aktifkan nav item yang sesuai
-    document.querySelectorAll('.nav-item').forEach(nav => {
-        if (nav.textContent.includes(getTabName(tabId))) {
+    targetTab.classList.add('active');
+    setTimeout(() => {
+        targetTab.style.opacity = '1';
+    }, 50);
+    
+    console.log(`✅ [showTab] Tab activated: #tab-${tabId}`);
+    
+    // ===== 5. AKTIFKAN NAV ITEM YANG SESUAI =====
+    const navItems = document.querySelectorAll('.nav-item');
+    let navFound = false;
+    
+    navItems.forEach(nav => {
+        const tabName = getTabName(tabId);
+        
+        // Cek dengan berbagai metode
+        const matches = 
+            nav.textContent.includes(tabName) ||
+            nav.getAttribute('data-tab') === tabId ||
+            nav.getAttribute('onclick')?.includes(`'${tabId}'`);
+        
+        if (matches) {
             nav.classList.add('active');
+            nav.style.opacity = '1';
+            nav.style.transform = 'scale(1)';
+            navFound = true;
+            console.log(`✅ [showTab] Nav item activated: ${nav.textContent.trim()}`);
         }
     });
     
-    currentView = tabId;
-    
-    // Update konten tab spesifik
-    switch(tabId) {
-        case 'dashboard':
-            updateDashboard();
-            updateDashboardTitle();
-            if (!expenseChart) initializeExpenseChart();
-            switchChartTab('categories');
-            break;
-        case 'expenses':
-            renderExpenseList();
-            break;
-        case 'income':
-            renderIncomeList();
-            updateIncomeChart();
-            break;
-        case 'checklists':
-            renderChecklist();
-            break;
-        case 'investments':
-            updateSimulation();
-            updateSimulationTitle();
-            break;
+    if (!navFound) {
+        console.warn(`⚠️ [showTab] No nav item found for tab: "${tabId}"`);
     }
     
-    // Scroll ke atas
-    window.scrollTo(0, 0);
+    // ===== 6. UPDATE CURRENT VIEW =====
+    currentView = tabId;
+    console.log(`🔄 [showTab] Current view set to: "${currentView}"`);
+    
+    // ===== 7. SPECIAL HANDLING PER TAB =====
+    switch(tabId) {
+        case 'dashboard':
+            console.log("📊 [showTab] Dashboard initialization...");
+            
+            // Update dashboard data
+            updateDashboard();
+            updateDashboardTitle();
+            
+            // Setup charts dengan delay untuk pastikan DOM ready
+            setTimeout(() => {
+                if (!expenseChart) {
+                    console.log("🎨 Initializing expense chart...");
+                    initializeExpenseChart();
+                }
+                
+                // Set default chart tab
+                switchChartTab('categories');
+                
+                console.log("✅ [showTab] Dashboard ready");
+            }, 200);
+            break;
+            
+        case 'expenses':
+            console.log("💸 [showTab] Expenses tab initialization...");
+            renderExpenseList();
+            console.log("✅ [showTab] Expenses ready");
+            break;
+            
+        case 'income':
+            console.log("💰 [showTab] Income tab initialization...");
+            renderIncomeList();
+            
+            // Update chart dengan delay
+            setTimeout(() => {
+                updateIncomeChart();
+                console.log("✅ [showTab] Income chart updated");
+            }, 150);
+            break;
+            
+        case 'checklists':
+            console.log("✅ [showTab] Checklists tab initialization...");
+            renderChecklist();
+            console.log("✅ [showTab] Checklists ready");
+            break;
+            
+        case 'investments':
+            console.log("📈 [showTab] Investments tab initialization...");
+            updateSimulation();
+            updateSimulationTitle();
+            console.log("✅ [showTab] Investments ready");
+            break;
+            
+        case 'settings':
+            console.log("⚙️ [showTab] Settings tab SPECIAL INITIALIZATION");
+            
+            // ⭐⭐⭐ CRITICAL: Wait for DOM to render fully ⭐⭐⭐
+            setTimeout(() => {
+                console.log("🔄 [showTab] Initializing settings form elements...");
+                
+                // 1. Target Amount Input
+                const targetInput = document.getElementById('target-amount-input');
+                if (targetInput) {
+                    if (appSettings.targetAmount) {
+                        const valueInJuta = (appSettings.targetAmount / 1000000).toFixed(0);
+                        targetInput.value = valueInJuta;
+                        console.log(`   ✅ Target input filled: ${valueInJuta} juta`);
+                    } else {
+                        targetInput.value = '300'; // Default
+                    }
+                } else {
+                    console.error(`   ❌ target-amount-input not found in DOM`);
+                }
+                
+                // 2. Timeline Start Date
+                const startInput = document.getElementById('start-date');
+                if (startInput) {
+                    if (currentTimeline && currentTimeline.startDate) {
+                        startInput.value = currentTimeline.startDate;
+                        console.log(`   ✅ Start date filled: ${currentTimeline.startDate}`);
+                    } else {
+                        // Set default: today
+                        const today = new Date().toISOString().split('T')[0];
+                        startInput.value = today;
+                        console.log(`   ✅ Start date set to today: ${today}`);
+                    }
+                } else {
+                    console.error(`   ❌ start-date input not found in DOM`);
+                }
+                
+                // 3. Timeline End Date
+                const endInput = document.getElementById('end-date');
+                if (endInput) {
+                    if (currentTimeline && currentTimeline.endDate) {
+                        endInput.value = currentTimeline.endDate;
+                        console.log(`   ✅ End date filled: ${currentTimeline.endDate}`);
+                    } else {
+                        // Set default: 3 years from today
+                        const today = new Date();
+                        const future = new Date(today);
+                        future.setFullYear(today.getFullYear() + 3);
+                        endInput.value = future.toISOString().split('T')[0];
+                        console.log(`   ✅ End date set to default: ${endInput.value}`);
+                    }
+                } else {
+                    console.error(`   ❌ end-date input not found in DOM`);
+                }
+                
+                // 4. Update all timeline displays
+                updateTimelineDisplay();
+                updateTimelinePreview();
+                
+                // 5. Setup validation listeners
+                setupDateInputEnhancements();
+                
+                // 6. Update data counts
+                document.getElementById('data-count-income').textContent = incomeRecords.length;
+                document.getElementById('data-count-expense').textContent = expenses.length;
+                
+                // 7. Update last backup time
+                const lastBackup = localStorage.getItem('lastBackupTime');
+                if (lastBackup) {
+                    document.getElementById('last-backup-time').textContent = 
+                        new Date(lastBackup).toLocaleDateString('id-ID');
+                }
+                
+                console.log("✅ [showTab] Settings tab fully initialized");
+                
+                // Debug: log all found elements
+                debugFormElements();
+                
+            }, 200); // 200ms cukup untuk DOM render
+            
+            break;
+            
+        default:
+            console.warn(`⚠️ [showTab] No special handling for tab: "${tabId}"`);
+    }
+    
+    // ===== 8. SCROLL KE ATAS DENGAN ANIMASI =====
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+    
+    // ===== 9. UPDATE URL HASH (Optional - untuk bookmarking) =====
+    // history.pushState(null, null, `#${tabId}`);
+    
+    // ===== 10. LOG COMPLETION =====
+    console.log(`✅ [showTab] COMPLETED for tab: "${tabId}"`);
+    console.log("=".repeat(50));
 }
+
+// Debug function untuk cek semua timeline elements
+function debugTimelineElements() {
+    console.log("=== DEBUG TIMELINE ELEMENTS ===");
+    
+    const elements = [
+        'display-start-date',
+        'display-end-date', 
+        'display-days-left',
+        'display-timeline-progress',
+        'start-date',
+        'end-date'
+    ];
+    
+    elements.forEach(id => {
+        const el = document.getElementById(id);
+        console.log(`${id}:`, el ? `✅ FOUND` : '❌ NOT FOUND');
+        if (el) {
+            console.log(`   Value: ${el.value || el.textContent}`);
+            console.log(`   Parent: ${el.parentElement?.id || 'N/A'}`);
+        }
+    });
+    
+    console.log("Current timeline:", currentTimeline);
+    console.log("Current view:", currentView);
+    console.log("Active tab:", document.querySelector('.tab-content.active')?.id);
+    console.log("==============================");
+}
+
+// Panggil di console: debugTimelineElements()
 
 function getTabName(tabId) {
     const names = {
@@ -348,7 +1599,14 @@ function getTabName(tabId) {
         'investments': 'Simulasi',
         'settings': 'Pengaturan'
     };
-    return names[tabId] || tabId;
+    
+    const name = names[tabId];
+    if (!name) {
+        console.warn(`⚠️ [getTabName] Unknown tab ID: "${tabId}"`);
+        return tabId;
+    }
+    
+    return name;
 }
 
 function updateDashboard() {
@@ -358,14 +1616,14 @@ function updateDashboard() {
         // 1. Hitung total tabungan
         const totalIncome = incomeRecords.reduce((sum, item) => sum + item.amount, 0);
         const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
-        const totalSaved = Math.max(0, totalIncome - totalExpenses); // Tidak boleh negatif
+        const totalSaved = Math.max(0, totalIncome - totalExpenses);
         
         // 2. Update tabungan di UI
         document.getElementById('total-saved').textContent = formatCurrency(totalSaved);
         document.getElementById('current-month-balance').textContent = formatCurrency(totalSaved);
         document.getElementById('actual-per-month').textContent = formatCurrency(totalSaved);
         
-        // 3. Hitung progress
+        // 3. Hitung progress terhadap target
         const target = appSettings.targetAmount || 300000000;
         const progressPercentage = Math.min(100, (totalSaved / target) * 100);
         
@@ -373,51 +1631,30 @@ function updateDashboard() {
         document.getElementById('main-progress-text').textContent = `${progressPercentage.toFixed(1)}%`;
         document.getElementById('overall-progress').textContent = `${progressPercentage.toFixed(1)}%`;
         
-        // 4. ⭐⭐ HITUNG SISA HARI DINAMIS ⭐⭐
-        const timelineYears = appSettings.timelineYears || 3;
-        const targetDate = new Date();
-        targetDate.setFullYear(targetDate.getFullYear() + timelineYears);
+        // ⭐⭐⭐ 4. HITUNG BERDASARKAN TIMELINE BARU ⭐⭐⭐
+        const remainingDays = calculateRemainingDays(); // Dari timeline system
+        const monthsLeft = Math.max(1, remainingDays / 30.44); // Rata-rata hari per bulan
         
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Reset waktu
+        // Update sisa hari di header (sudah ada di updateHeaderRemainingDays())
+        // const daysElement = document.getElementById('days-left');
+        // if (daysElement) daysElement.textContent = remainingDays;
         
-        const diffTime = targetDate.getTime() - today.getTime();
-        const remainingDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-        
-        // Update sisa hari di header
-        const daysElement = document.getElementById('days-left');
-        if (daysElement) {
-            daysElement.textContent = remainingDays;
-            
-            // Warna berdasarkan urgency
-            if (remainingDays > 720) {
-                daysElement.style.color = '#2ecc71';
-            } else if (remainingDays > 360) {
-                daysElement.style.color = '#f39c12';
-            } else if (remainingDays > 90) {
-                daysElement.style.color = '#e67e22';
-            } else {
-                daysElement.style.color = '#e74c3c';
-            }
-        }
-        
-        // 5. Hitung kebutuhan bulanan BERDASARKAN HARI DINAMIS
-        const monthsLeftDynamic = remainingDays / 30.44; // Rata-rata hari per bulan
-        const neededPerMonth = Math.max(0, (target - totalSaved) / Math.max(1, monthsLeftDynamic));
+        // ⭐⭐⭐ 5. Hitung kebutuhan bulanan BERDASARKAN TIMELINE ⭐⭐⭐
+        const neededPerMonth = Math.max(0, (target - totalSaved) / monthsLeft);
         
         document.getElementById('needed-per-month').textContent = formatCurrency(neededPerMonth);
         
-        console.log('📊 Dashboard updated:', {
+        console.log('📊 Dashboard updated (NEW SYSTEM):', {
             saved: formatCurrency(totalSaved),
             target: formatCurrency(target),
             progress: progressPercentage.toFixed(1) + '%',
             remainingDays: remainingDays,
+            monthsLeft: monthsLeft.toFixed(1),
             neededMonthly: formatCurrency(neededPerMonth)
         });
         
-        // 6. Update chart jika ada data
+        // 6. Update charts
         if (expenseChart) updateExpenseChart();
-        if (monthlyTrendChart) updateMonthlyTrendChart();
         if (progressChart) updateProgressChart();
         
     } catch (error) {
@@ -854,58 +2091,176 @@ function updateIncomeChart() {
 // ========== ✅ FUNGSI CHECKLIST ==========
 function addChecklistItem() {
     const container = document.getElementById('master-checklist');
+    if (!container) return;
+    
     const id = 'checklist_' + Date.now();
     
-    const itemHTML = `
-        <div class="checklist-item-custom" id="${id}">
-            <input type="checkbox" onchange="toggleChecklistItem('${id}')">
-            <input type="text" placeholder="Item checklist baru" onblur="saveChecklistItem('${id}', this.value)">
-            <button onclick="deleteChecklistItem('${id}')" style="background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 5px 10px; margin-left: 10px; cursor: pointer;">Hapus</button>
-        </div>
-    `;
+    // SIMPAN KE LOCALSTORAGE (TEXT KOSONG)
+    let items = JSON.parse(localStorage.getItem('checklist') || '[]');
+    items.push({
+        id: id,
+        text: '', // TEXT KOSONG
+        completed: false,
+        isNew: true,
+        createdAt: new Date().toISOString()
+    });
+    localStorage.setItem('checklist', JSON.stringify(items));
     
-    container.insertAdjacentHTML('beforeend', itemHTML);
+    // BUAT ELEMENT DENGAN PLACEHOLDER
+    container.insertAdjacentHTML('beforeend', 
+        `<div class="checklist-item-custom new-checklist-item" id="${id}">
+            <input type="checkbox" onchange="toggleChecklistItem('${id}')">
+            <input type="text" 
+                   class="checklist-input-new" 
+                   placeholder="📝 Ketik checklist item di sini..."
+                   onfocus="this.placeholder=''"
+                   onblur="if(!this.value) this.placeholder='📝 Ketik checklist item di sini...'; saveChecklistText('${id}', this.value)"
+                   onkeypress="if(event.key === 'Enter') { this.blur(); }">
+            <button onclick="deleteChecklistItem('${id}')" 
+                    style="background:#e74c3c;color:white;border:none;border-radius:4px;padding:5px 10px;margin-left:10px;cursor:pointer;">
+                Hapus
+            </button>
+        </div>`
+    );
+    
+    // AUTO FOCUS DAN SELECT
+    setTimeout(() => {
+        const input = document.querySelector(`#${id} .checklist-input-new`);
+        if (input) {
+            input.focus();
+            // Real-time save saat typing
+            input.addEventListener('input', function() {
+                saveChecklistText(id, this.value);
+            });
+        }
+    }, 100);
 }
 
-function toggleChecklistItem(id) {
-    const item = document.getElementById(id);
-    const checkbox = item.querySelector('input[type="checkbox"]');
-    
-    if (checkbox.checked) {
-        item.classList.add('completed');
-    } else {
-        item.classList.remove('completed');
+// FUNGSI AUTO CLEAR
+function clearIfDefault(input, id) {
+    if (input.value === 'Ketik di sini...' || 
+        input.value === 'Item checklist baru') {
+        input.value = ''; // ⭐ KOSONGKAN SAAT DIKLIK
     }
 }
 
+function toggleChecklistItem(id) {
+    let items = JSON.parse(localStorage.getItem('checklist') || '[]');
+    let item = items.find(i => i.id === id);
+    
+    if (item) {
+        item.completed = !item.completed;
+        localStorage.setItem('checklist', JSON.stringify(items)); // ⭐ SIMPAN!
+        
+        // Update UI
+        let el = document.getElementById(id);
+        if (el) {
+            el.classList.toggle('completed');
+        }
+    }
+}
+
+
 function deleteChecklistItem(id) {
-    if (!confirm('Hapus item checklist ini?')) return;
-    document.getElementById(id).remove();
+    if (!confirm('Hapus item ini?')) return;
+    
+    let items = JSON.parse(localStorage.getItem('checklist') || '[]');
+    items = items.filter(i => i.id !== id);
+    localStorage.setItem('checklist', JSON.stringify(items)); // ⭐ SIMPAN!
+    
+    document.getElementById(id)?.remove();
 }
 
 function renderChecklist() {
-    // Implementasi render checklist jika ada data tersimpan
     const container = document.getElementById('master-checklist');
+    if (!container) return;
     
-    // Contoh checklist default
-    const defaultChecklist = [
-        { id: 'check1', text: 'Buat anggaran bulanan', completed: false },
-        { id: 'check2', text: 'Tabung 30% dari pendapatan', completed: false },
-        { id: 'check3', text: 'Bayar semua tagihan tepat waktu', completed: true },
-        { id: 'check4', text: 'Review investasi bulanan', completed: false }
-    ];
+    // LOAD DARI LOCALSTORAGE
+    let items = JSON.parse(localStorage.getItem('checklist') || '[]');
     
+    // JIKA KOSONG, BUAT DEFAULT (DENGAN PLACEHOLDER)
+    if (items.length === 0) {
+        items = [
+            { id: 'check1', text: 'Buat anggaran bulanan', completed: false },
+            { id: 'check2', text: 'Tabung 30% dari pendapatan', completed: false },
+            { id: 'check3', text: 'Bayar semua tagihan tepat waktu', completed: true },
+            { id: 'check4', text: 'Review investasi bulanan', completed: false }
+        ];
+        localStorage.setItem('checklist', JSON.stringify(items));
+    }
+    
+    // RENDER - GUNAKAN PLACEHOLDER JIKA TEXT KOSONG
     let html = '';
-    defaultChecklist.forEach(item => {
-        html += `
-            <div class="checklist-item-custom ${item.completed ? 'completed' : ''}" id="${item.id}">
-                <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleChecklistItem('${item.id}')">
-                <input type="text" value="${item.text}" onblur="saveChecklistItem('${item.id}', this.value)">
-            </div>
-        `;
+    items.forEach(item => {
+        const inputValue = item.text || ''; // Kosong jika tidak ada text
+        const placeholder = item.text ? '' : '📝 Ketik checklist item di sini...';
+        
+        html += `<div class="checklist-item-custom ${item.completed ? 'completed' : ''}" id="${item.id}">
+            <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleChecklistItem('${item.id}')">
+            <input type="text" 
+                   class="checklist-input" 
+                   value="${inputValue.replace(/"/g, '&quot;')}"
+                   placeholder="${placeholder}"
+                   onfocus="if(this.placeholder) this.placeholder=''"
+                   onblur="saveChecklistText('${item.id}', this.value)"
+                   onkeypress="if(event.key === 'Enter') this.blur();">
+            <button onclick="deleteChecklistItem('${item.id}')" 
+                    style="background:#e74c3c;color:white;border:none;border-radius:4px;padding:5px 10px;margin-left:10px;cursor:pointer;">
+                Hapus
+            </button>
+        </div>`;
     });
     
     container.innerHTML = html;
+    setTimeout(setupChecklistEvents, 100);
+}
+
+function saveChecklistText(id, text) {
+    console.log('Saving:', id, text); // Debug
+    
+    let items = JSON.parse(localStorage.getItem('checklist') || '[]');
+    let item = items.find(i => i.id === id);
+    
+    if (item) {
+        item.text = text;
+        localStorage.setItem('checklist', JSON.stringify(items)); // ⭐ SIMPAN!
+        console.log('✅ Saved to localStorage');
+    } else {
+        console.log('❌ Item not found:', id);
+    }
+}
+
+// 3. FUNGSI YANG HILANG - INI YANG PERLU DITAMBAH!
+function saveChecklistItem(id, text) {
+    // CARI ITEM DI ARRAY
+    const itemIndex = checklistItems.findIndex(item => item.id === id);
+    
+    if (itemIndex !== -1) {
+        // UPDATE TEXT
+        checklistItems[itemIndex].text = text;
+        checklistItems[itemIndex].lastUpdated = new Date().toISOString();
+        
+        // SIMPAN KE LOCALSTORAGE
+        localStorage.setItem('financial_checklist', JSON.stringify(checklistItems));
+        console.log(`✅ Checklist item "${text}" disimpan`);
+    }
+}
+
+function setupChecklistEvents() {
+    document.querySelectorAll('.checklist-input').forEach(input => {
+        // Real-time save saat typing (opsional)
+        input.addEventListener('input', function() {
+            const id = this.closest('.checklist-item-custom').id;
+            saveChecklistText(id, this.value);
+        });
+        
+        // Save saat tekan Enter
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.blur();
+            }
+        });
+    });
 }
 
 // ========== 📈 FUNGSI SIMULASI INVESTASI ==========
@@ -917,8 +2272,12 @@ function updateSimulation() {
     document.getElementById('saving-slider-value').textContent = formatCurrency(monthlySaving);
     document.getElementById('return-slider-value').textContent = annualReturn + '%';
     
+    // ⭐⭐⭐ HITUNG BERDASARKAN TIMELINE DURASI ⭐⭐⭐
+    // Pakai totalDays dari timeline, bukan timelineYears
+    const totalDays = currentTimeline.totalDays || 1095; // Default 3 tahun
+    const years = totalDays / 365; // Konversi hari ke tahun
+    
     // Hitung simulasi
-    const years = appSettings.timelineYears || 3;
     const simulatedTotal = calculateCompoundInterest(0, monthlySaving, annualReturn, years);
     const target = appSettings.targetAmount || 300000000;
     const gap = simulatedTotal - target;
@@ -934,6 +2293,13 @@ function updateSimulation() {
         document.getElementById('target-status').textContent = 'BELUM TERCAPAI';
         document.getElementById('target-status').style.color = '#e74c3c';
     }
+    
+    console.log("📈 Simulation updated:", {
+        years: years.toFixed(1),
+        totalDays: totalDays,
+        simulated: formatCurrency(simulatedTotal),
+        target: formatCurrency(target)
+    });
 }
 
 function runInvestmentSimulation() {
@@ -943,7 +2309,7 @@ function runInvestmentSimulation() {
 
 function calculateCompoundInterest(principal, monthly, annualRate, years) {
     const monthlyRate = annualRate / 100 / 12;
-    const months = years * 12;
+    const months = years * 12; // Years sudah dalam desimal
     let total = principal;
     
     for (let i = 0; i < months; i++) {
@@ -954,149 +2320,403 @@ function calculateCompoundInterest(principal, monthly, annualRate, years) {
 }
 
 // ========== ⚙️ FUNGSI PENGATURAN ==========
+// GANTI fungsi saveSettings() dengan ini (baris ~2401):
 function saveSettings() {
-  const targetInput = document.getElementById('target-amount-input');
-  const yearsInput = document.getElementById('timeline-years-input');
-  
-  // Validasi input
-  if (!targetInput || !yearsInput) {
-    showAlert('Tab Pengaturan tidak ditemukan di HTML.', 'error');
-    return;
-  }
-  
-  const targetMillion = parseFloat(targetInput.value);
-  const years = parseInt(yearsInput.value);
-  
-  if (isNaN(targetMillion) || targetMillion <= 0 || isNaN(years) || years <= 0) {
-    showAlert('Harap masukkan angka yang valid untuk target dan jangka waktu.', 'warning');
-    return;
-  }
-  
-  // Simpan ke appSettings (di script-rapi.js variable-nya adalah appSettings)
-  appSettings.targetAmount = targetMillion * 1000000; // Konversi juta ke rupiah
-  appSettings.timelineYears = years;
-  
-  // Simpan ke localStorage
-  saveToLocalStorage();
-  
-  // Perbarui UI
-//   updateDashboard(); // Fungsi ini akan menghitung ulang progress
-  showAlert('Pengaturan berhasil disimpan! Target diperbarui.', 'success');
-  
-  // Update judul dashboard agar menampilkan target baru
-//   updateDashboardTitle();
+    console.log("💾 [saveSettings] SUPER SAFE VERSION");
+    
+    // METHOD 1: Cek dulu apakah kita di tab settings
+    const settingsTab = document.getElementById('tab-settings');
+    const isSettingsActive = settingsTab && settingsTab.classList.contains('active');
+    
+    console.log("🔍 Debug Info:", {
+        currentView: currentView,
+        isSettingsActive: isSettingsActive,
+        settingsTab: settingsTab,
+        activeTab: document.querySelector('.tab-content.active')?.id
+    });
+    
+    // Jika tidak di settings, redirect ke safe version
+    if (!isSettingsActive || currentView !== 'settings') {
+        console.error("❌ ERROR: Called from wrong tab!");
+        safeSaveSettings();
+        return;
+    }
+    
+    // METHOD 2: Cari input dengan MULTIPLE METHODS
+    let targetInput = null;
+    
+    // Try method 1: getElementById
+    targetInput = document.getElementById('target-amount-input');
+    
+    // Try method 2: querySelector
+    if (!targetInput) {
+        console.warn("⚠️ Method 1 failed, trying querySelector...");
+        targetInput = document.querySelector('#target-amount-input');
+    }
+    
+    // Try method 3: Cari di dalam settings tab
+    if (!targetInput && settingsTab) {
+        console.warn("⚠️ Method 2 failed, searching within settings tab...");
+        targetInput = settingsTab.querySelector('#target-amount-input');
+    }
+    
+    // Try method 4: Cari semua input dan filter
+    if (!targetInput) {
+        console.warn("⚠️ Method 3 failed, searching all inputs...");
+        const allInputs = document.querySelectorAll('input');
+        allInputs.forEach(input => {
+            if (input.id === 'target-amount-input' || 
+                input.getAttribute('placeholder')?.includes('contoh') ||
+                input.type === 'number') {
+                targetInput = input;
+            }
+        });
+    }
+    
+    // ⭐⭐⭐ CRITICAL CHECK ⭐⭐⭐
+    if (!targetInput) {
+        console.error("❌ CRITICAL ERROR: target-amount-input NOT FOUND AFTER ALL METHODS!");
+        
+        // EMERGENCY: Create temporary input
+        const emergencyHTML = `
+            <div id="emergency-target-form" style="
+                background: #fff3cd; 
+                padding: 20px; 
+                border-radius: 10px; 
+                margin: 20px 0;
+                border: 2px solid #ffc107;
+            ">
+                <h4 style="color: #856404;">🆘 EMERGENCY INPUT</h4>
+                <p>Form target tidak ditemukan. Silakan isi manual:</p>
+                <input type="number" id="emergency-target" 
+                       placeholder="Masukkan target (juta)" 
+                       value="300"
+                       style="padding: 10px; width: 100%; margin: 10px 0; font-size: 16px;">
+                <button onclick="saveSettingsEmergency()" 
+                        style="background: #28a745; color: white; padding: 12px 20px; 
+                               border: none; border-radius: 5px; cursor: pointer;">
+                    💾 Simpan Target Emergency
+                </button>
+            </div>
+        `;
+        
+        // Tambahkan ke content area
+        const contentArea = document.querySelector('.content-area');
+        if (contentArea) {
+            contentArea.insertAdjacentHTML('beforeend', emergencyHTML);
+        }
+        
+        showAlert('error', 
+            'Form target tidak ditemukan.\n' +
+            'Emergency input telah dibuat di bawah halaman.\n' +
+            'Silakan isi dan klik "Simpan Target Emergency".'
+        );
+        return;
+    }
+    
+    // ⭐⭐⭐ SEKARANG BARU AMAN UNTUK AKSES .value ⭐⭐⭐
+    console.log("✅ SUCCESS: Input element found!", {
+        id: targetInput.id,
+        value: targetInput.value,
+        type: targetInput.type
+    });
+    
+    const inputValue = targetInput.value; // ← SEKARANG AMAN!
+    
+    // Validasi input
+    if (!inputValue || inputValue.trim() === '') {
+        showAlert('warning', 'Harap isi target dana');
+        targetInput.focus();
+        return;
+    }
+    
+    const numericValue = parseFloat(inputValue);
+    if (isNaN(numericValue) || numericValue <= 0) {
+        showAlert('warning', 'Target harus berupa angka positif');
+        targetInput.focus();
+        return;
+    }
+    
+    // Simpan data
+    appSettings.targetAmount = numericValue * 1000000;
+    
+    try {
+        localStorage.setItem('financial_settings', JSON.stringify(appSettings));
+        console.log("✅ Settings saved:", appSettings);
+    } catch (e) {
+        console.error("❌ Error saving settings:", e);
+        showAlert('error', 'Gagal menyimpan. Storage mungkin penuh.');
+        return;
+    }
+    
+    // Update UI
+    updateDashboard();
+    updateHeaderTarget();
+    
+    // Update judul
+    const titleElement = document.getElementById('dashboard-target-title');
+    if (titleElement) {
+        titleElement.innerHTML = `Progress Menuju Rp ${numericValue} Juta`;
+    }
+    
+    const simTitleElement = document.getElementById('simulation-target-title');
+    if (simTitleElement) {
+        simTitleElement.innerHTML = `Simulasi Mencapai Rp ${numericValue} Juta`;
+    }
+    
+    showAlert('success', `Target Rp ${numericValue} juta berhasil disimpan!`);
+    
+    // Hapus emergency form jika ada
+    const emergencyForm = document.getElementById('emergency-target-form');
+    if (emergencyForm) {
+        emergencyForm.remove();
+    }
+}
+
+// ⭐⭐⭐ EMERGENCY SAVE FUNCTION ⭐⭐⭐
+function saveSettingsEmergency() {
+    console.log("🆘 Emergency save triggered");
+    
+    const emergencyInput = document.getElementById('emergency-target');
+    if (!emergencyInput || !emergencyInput.value) {
+        alert('Harap isi target terlebih dahulu!');
+        return;
+    }
+    
+    const numericValue = parseFloat(emergencyInput.value) || 300;
+    const targetAmount = numericValue * 1000000;
+    
+    appSettings.targetAmount = targetAmount;
+    
+    // Simpan ke localStorage
+    localStorage.setItem('financial_settings', JSON.stringify(appSettings));
+    
+    // Update UI
+    updateDashboard();
+    updateHeaderTarget();
+    
+    // Update judul
+    const titleElement = document.getElementById('dashboard-target-title');
+    if (titleElement) {
+        titleElement.innerHTML = `Progress Menuju Rp ${numericValue} Juta`;
+    }
+    
+    const simTitleElement = document.getElementById('simulation-target-title');
+    if (simTitleElement) {
+        simTitleElement.innerHTML = `Simulasi Mencapai Rp ${numericValue} Juta`;
+    }
+    
+    // Hapus emergency form
+    const emergencyForm = document.getElementById('emergency-target-form');
+    if (emergencyForm) {
+        emergencyForm.remove();
+    }
+    
+    // Tampilkan konfirmasi
+    alert(`✅ Target Rp ${numericValue} juta berhasil disimpan!\n\nHalaman akan reload...`);
+    
+    // Reload halaman untuk pastikan UI update
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
 }
 
 function updateDashboardTitle() {
-  const titleElement = document.getElementById('dashboard-target-title');
-  if (titleElement) {
-    const targetInMillions = (appSettings.targetAmount / 1000000).toFixed(0);
-    titleElement.innerHTML = `Progress Menuju Rp ${targetInMillions} Juta`;
-    console.log('✅ Judul diupdate via ID');
-  }
+    const titleElement = document.getElementById('dashboard-target-title');
+    if (titleElement) {
+        const targetInMillions = (appSettings.targetAmount / 1000000).toFixed(0);
+        titleElement.innerHTML = `Progress Menuju Rp ${targetInMillions} Juta`;
+        console.log('✅ Dashboard title updated');
+    }
 }
 
 // Fungsi untuk update Target di header
+// ⭐⭐ PASTIKAN updateHeaderTarget() ADA DAN BEKERJA ⭐⭐
 function updateHeaderTarget() {
+    console.log("🔄 updateHeaderTarget() called");
+    
     const target = appSettings.targetAmount || 300000000;
     const targetInJuta = (target / 1000000).toFixed(0);
     
     const headerTargetElement = document.getElementById('header-target');
     if (headerTargetElement) {
         headerTargetElement.textContent = `Rp ${targetInJuta} Juta`;
-        console.log('🎯 Header target updated to:', targetInJuta + ' juta');
+        console.log('🎯 Header target updated:', targetInJuta + ' juta');
+    } else {
+        console.warn('⚠️ Header target element not found, trying again...');
+        // Coba lagi setelah delay
+        setTimeout(updateHeaderTarget, 500);
     }
 }
 
 // Fungsi untuk update Sisa Hari di header
 function updateHeaderRemainingDays() {
     try {
-        const timelineYears = appSettings.timelineYears || 3;
-        const targetDate = new Date();
-        targetDate.setFullYear(targetDate.getFullYear() + timelineYears);
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const diffTime = targetDate.getTime() - today.getTime();
-        const remainingDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-        
-        const daysElement = document.getElementById('days-left');
-        if (daysElement) {
-            daysElement.textContent = remainingDays;
+        // ⭐⭐ VALIDASI: Pastikan timeline ada endDate ⭐⭐
+        if (!currentTimeline || !currentTimeline.endDate) {
+            console.warn("⚠️ [updateHeaderRemainingDays] No end date, using default 3 years");
             
-            // Warna
-            if (remainingDays > 720) daysElement.style.color = '#2ecc71';
-            else if (remainingDays > 360) daysElement.style.color = '#f39c12';
-            else if (remainingDays > 90) daysElement.style.color = '#e67e22';
-            else daysElement.style.color = '#e74c3c';
+            // Fallback: 3 tahun dari sekarang
+            const today = new Date();
+            const fallbackDate = new Date(today);
+            fallbackDate.setFullYear(today.getFullYear() + 3);
+            
+            const daysLeft = calculateTotalDays(today.toISOString().split('T')[0], 
+                                              fallbackDate.toISOString().split('T')[0]);
+            
+            updateDaysElement(daysLeft);
+            return daysLeft;
         }
         
+        // Normal calculation
+        const end = new Date(currentTimeline.endDate);
+        const now = new Date();
+        
+        end.setHours(0, 0, 0, 0);
+        now.setHours(0, 0, 0, 0);
+        
+        const diffMs = end - now;
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        const remainingDays = Math.max(0, diffDays);
+        
+        updateDaysElement(remainingDays);
         return remainingDays;
         
     } catch (error) {
-        console.error('Error calculating days:', error);
-        return (appSettings.timelineYears || 3) * 12 * 30; // Fallback static
+        console.error("❌ Error in updateHeaderRemainingDays:", error);
+        
+        // Emergency fallback
+        const fallbackDays = 1095; // 3 tahun
+        updateDaysElement(fallbackDays);
+        return fallbackDays;
+    }
+}
+
+// Helper function untuk update UI
+function updateDaysElement(days) {
+    const daysElement = document.getElementById('days-left');
+    if (daysElement) {
+        daysElement.textContent = days;
+        
+        // Warna berdasarkan urgency
+        if (days > 720) {
+            daysElement.style.color = '#2ecc71';
+        } else if (days > 360) {
+            daysElement.style.color = '#f39c12';
+        } else if (days > 90) {
+            daysElement.style.color = '#e67e22';
+        } else {
+            daysElement.style.color = '#e74c3c';
+        }
     }
 }
 
 function checkAndUpdateDaily() {
-    const today = new Date().toDateString(); // "Mon Dec 30 2024"
-    const lastUpdate = localStorage.getItem('lastDailyUpdate');
-    
-    if (lastUpdate !== today) {
-        console.log('🔄 Daily update detected, updating counters...');
-        updateHeaderRemainingDays();
-        localStorage.setItem('lastDailyUpdate', today);
+    try {
+        const today = new Date().toDateString();
+        const lastUpdate = localStorage.getItem('lastDailyUpdate');
+        
+        // Jika hari berubah, update counter
+        if (lastUpdate !== today) {
+            console.log('📅 New day detected! Updating counters...');
+            
+            // ⭐⭐⭐ UPDATE BERDASARKAN TIMELINE SYSTEM ⭐⭐⭐
+            updateHeaderRemainingDays();
+            
+            // Update timeline display di settings page
+            updateTimelineDisplay();
+            updateTimelinePreview();
+            
+            // Update dashboard untuk perhitungan ulang
+            updateDashboard();
+            
+            // Simpan tanggal update terakhir
+            localStorage.setItem('lastDailyUpdate', today);
+            
+            console.log('🔄 Daily update completed');
+        }
+    } catch (error) {
+        console.error('Error in daily check:', error);
     }
 }
 
 function updateSimulationTitle() {
-  const titleElement = document.getElementById('simulation-target-title');
-  if (titleElement) {
-    const targetInMillions = (appSettings.targetAmount / 1000000).toFixed(0);
-    titleElement.innerHTML = `Simulasi Mencapai Rp ${targetInMillions} Juta`;
-  }
+    const titleElement = document.getElementById('simulation-target-title');
+    if (titleElement) {
+        const targetInMillions = (appSettings.targetAmount / 1000000).toFixed(0);
+        titleElement.innerHTML = `Simulasi Mencapai Rp ${targetInMillions} Juta`;
+        console.log('✅ Simulation title updated');
+    }
 }
 
 function saveSettings() {
-    const targetInput = document.getElementById('target-amount-input').value;
-    const yearsInput = document.getElementById('timeline-years-input').value;
+    console.log("💾 [saveSettings] SIMPLE FIX VERSION");
     
-    let targetAmount = 300000000;
-    let timelineYears = 3;
+    // ⭐⭐ SOLUSI SEDERHANA: TIDAK PERLU CARI ELEMENT ⭐⭐
+    // Karena kita tahu element ADA dari debug di atas
     
-    // Parse target amount
-    if (targetInput.includes('jt') || targetInput.includes('juta')) {
-        targetAmount = parseFloat(targetInput) * 1000000;
-    } else if (targetInput.includes('m') || targetInput.includes('M')) {
-        targetAmount = parseFloat(targetInput) * 1000000000;
-    } else {
-        targetAmount = parseFloat(targetInput) * 1000000; // Asumsi angka dalam juta
+    // Langsung ambil value dengan cara yang AMAN
+    let targetValue = "300"; // Default
+    
+    try {
+        // Coba ambil dari element
+        const targetInput = document.getElementById('target-amount-input');
+        if (targetInput && targetInput.value) {
+            targetValue = targetInput.value;
+            console.log("✅ Got value from input:", targetValue);
+        } else {
+            console.warn("⚠️ Using default value 300");
+        }
+    } catch (e) {
+        console.warn("⚠️ Error getting input value, using default:", e);
     }
     
-    timelineYears = parseInt(yearsInput);
+    // Convert ke number
+    const numericValue = parseFloat(targetValue) || 300;
     
-    if (isNaN(targetAmount) || targetAmount <= 0 || isNaN(timelineYears) || timelineYears <= 0) {
-        showAlert('warning', 'Harap isi target dan timeline dengan benar.');
+    // Update app settings
+    appSettings.targetAmount = numericValue * 1000000;
+    
+    // Simpan ke localStorage
+    try {
+        localStorage.setItem('financial_settings', JSON.stringify(appSettings));
+        console.log("✅ Settings saved successfully!");
+    } catch (e) {
+        console.error("❌ Error saving to localStorage:", e);
+        showAlert('error', 'Gagal menyimpan data. Coba lagi.');
         return;
     }
     
-    appSettings.targetAmount = targetAmount;
-    appSettings.timelineYears = timelineYears;
+    // ⭐⭐ UPDATE SEMUA UI YANG PERLU ⭐⭐
     
-    saveToLocalStorage();
+    // 1. Update dashboard progress
+    updateDashboard();
     
-    // ⭐⭐ UPDATE SEMUA YANG PERLU ⭐⭐
-    updateDashboard();           // 1. Progress bar & tabungan
-    updateDashboardTitle();      // 2. Judul dashboard
-    updateSimulationTitle();     // 3. Judul simulasi
+    // 2. Update target di header 🎯
+    updateHeaderTarget();
     
-    // ⭐⭐ TAMBAH 2 BARIS INI: ⭐⭐
-    updateHeaderTarget();        // 4. Target di header 🎯
-    updateHeaderRemainingDays(); // 5. Sisa hari di header 📅
+    // 3. Update judul dashboard
+    const dashboardTitle = document.getElementById('dashboard-target-title');
+    if (dashboardTitle) {
+        dashboardTitle.innerHTML = `Progress Menuju Rp ${numericValue} Juta`;
+        console.log("✅ Dashboard title updated");
+    }
     
-    showAlert('success', `Target Rp ${formatCurrency(targetAmount)} dalam ${timelineYears} tahun berhasil disimpan.`);
+    // 4. Update judul simulasi
+    const simTitle = document.getElementById('simulation-target-title');
+    if (simTitle) {
+        simTitle.innerHTML = `Simulasi Mencapai Rp ${numericValue} Juta`;
+        console.log("✅ Simulation title updated");
+    }
+    
+    // 5. Tampilkan konfirmasi
+    showAlert('success', 
+        `🎯 TARGET BERHASIL DISIMPAN!\n\n` +
+        `Jumlah: Rp ${numericValue} Juta\n` +
+        `Timeline: ${calculateRemainingDays()} hari tersisa`
+    );
+    
+    console.log("✅ saveSettings completed successfully!");
 }
 
 function resetAllData() {
@@ -1921,8 +3541,9 @@ function updateProgressChart() {
         const summaryDiv = document.getElementById('progress-summary');
         if (summaryDiv) {
             const needed = Math.max(0, target - totalSaved);
-            const monthsLeft = (appSettings.timelineYears || 3) * 12;
-            const neededPerMonth = needed / Math.max(1, monthsLeft);
+            const remainingDays = calculateRemainingDays();
+            const monthsLeft = Math.max(1, remainingDays / 30.44); // Konversi hari ke bulan
+            const neededPerMonth = needed / monthsLeft;
             
             // Tampilkan juga total pendapatan & pengeluaran
             const totalIncomeAllTime = incomeRecords.reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -1978,9 +3599,9 @@ function updateProgressChart() {
                         <div style="font-weight: bold; color: ${statusColor}; margin-bottom: 8px;">
                             📅 Rencana Bulanan
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                       <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                             <span>⏳ Sisa Waktu:</span>
-                            <strong>${monthsLeft} bulan (${appSettings.timelineYears || 3} tahun)</strong>
+                            <strong>${monthsLeft.toFixed(1)} bulan (${(monthsLeft/12).toFixed(1)} tahun)</strong>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
                             <span>💰 Perlu Tabung/Bulan:</span>
@@ -2017,11 +3638,17 @@ function updateProgressSummary(totalSaved, target, progressPercent) {
     if (!summaryDiv) return;
     
     const needed = Math.max(0, target - totalSaved);
-    const monthsLeft = (appSettings.timelineYears || 3) * 12;
-    const neededPerMonth = needed / Math.max(1, monthsLeft);
+    
+    // ⭐⭐⭐ PAKAI TIMELINE SYSTEM BARU ⭐⭐⭐
+    const remainingDays = calculateRemainingDays();
+    const monthsLeft = Math.max(1, remainingDays / 30.44);
+    const neededPerMonth = needed / monthsLeft;
     
     const totalIncome = incomeRecords.reduce((sum, item) => sum + (item.amount || 0), 0);
     const totalExpenses = expenses.reduce((sum, item) => sum + (item.amount || 0), 0);
+    
+    // Hitung timeline durasi
+    const timelineYears = currentTimeline.totalDays ? (currentTimeline.totalDays / 365).toFixed(1) : '3';
     
     summaryDiv.innerHTML = `
         <div style="text-align: center; margin-bottom: 20px;">
@@ -2065,10 +3692,14 @@ function updateProgressSummary(totalSaved, target, progressPercent) {
             <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                     <span>⏳ Sisa Waktu:</span>
-                    <strong>${monthsLeft} bulan</strong>
+                    <strong>${monthsLeft.toFixed(1)} bulan</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>📅 Total Timeline:</span>
+                    <strong>${timelineYears} tahun (${currentTimeline.totalDays || 1095} hari)</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                    <span>📅 Perlu Tabung/Bulan:</span>
+                    <span>💰 Perlu Tabung/Bulan:</span>
                     <strong style="color: ${neededPerMonth > 0 ? '#e74c3c' : '#2ecc71'}">
                         ${formatCurrency(neededPerMonth)}
                     </strong>
@@ -2108,12 +3739,17 @@ function getCurrentMonth() {
 }
 
 function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    } catch (e) {
+        return dateString;
+    }
 }
 
 function generateId() {
@@ -2322,8 +3958,265 @@ function exportDataToQR() {
     container.appendChild(decodeBtn);
 }
 
+// ⭐⭐⭐ FUNGSI UNTUK DAPATKAN TOTAL TAHUN DARI TIMELINE ⭐⭐⭐
+function getTimelineYears() {
+    if (!currentTimeline.totalDays) return 3; // Fallback
+    return currentTimeline.totalDays / 365;
+}
+
+// ⭐⭐⭐ FUNGSI UNTUK DAPATKAN BULAN TERSISA ⭐⭐⭐
+function getRemainingMonths() {
+    const remainingDays = calculateRemainingDays();
+    return Math.max(1, remainingDays / 30.44);
+}
+
+function migrateOldData() {
+    // Jika ada timelineYears di appSettings, konversi ke timeline system
+    if (appSettings.timelineYears) {
+        console.log("🔄 Migrating old timelineYears:", appSettings.timelineYears);
+        
+        // Jika timeline sudah ada, jangan timpa
+        if (!currentTimeline.endDate) {
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setFullYear(today.getFullYear() + appSettings.timelineYears);
+            
+            currentTimeline = {
+                startDate: today.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0],
+                totalDays: appSettings.timelineYears * 365,
+                createdAt: new Date().toISOString(),
+                lastUpdated: new Date().toISOString()
+            };
+            
+            localStorage.setItem('financial_timeline', JSON.stringify(currentTimeline));
+            console.log("✅ Migrated to new timeline system");
+        }
+        
+        // ⭐⭐⭐ OPSIONAL: Hapus timelineYears dari appSettings ⭐⭐⭐
+        // delete appSettings.timelineYears;
+        // localStorage.setItem('financial_settings', JSON.stringify(appSettings));
+    }
+}
+
+// Emergency fix untuk timeline yang corrupt
+function fixTimelineEmergency() {
+    console.log("🆘 Applying emergency timeline fix...");
+    
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setFullYear(today.getFullYear() + 3);
+    
+    currentTimeline = {
+        startDate: today.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        totalDays: 1095,
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    };
+    
+    localStorage.setItem('financial_timeline', JSON.stringify(currentTimeline));
+    
+    console.log("✅ Timeline fixed:", currentTimeline);
+    updateHeaderRemainingDays();
+    alert("Timeline diperbaiki! Refresh halaman.");
+}
+
+// Panggil di console browser: fixTimelineEmergency()
+
 // Auto load saat buka tab settings
 document.addEventListener('DOMContentLoaded', function() {
     // Load library saat pertama kali
     setTimeout(loadQRCodeLibrary, 2000);
 });
+
+// ===== ENHANCED FUNCTIONS =====
+
+// Target Preset
+function setTargetPreset(amountInMillions) {
+    document.getElementById('target-amount-input').value = amountInMillions;
+    showValidationMessage(`Target diset ke Rp ${amountInMillions} juta`, 'success');
+}
+
+// Enhanced Timeline Save with Animation
+function safeSaveTimeline() {
+    console.log("💾 Saving timeline with animation...");
+    
+    // Show loading state
+    const saveBtn = document.querySelector('[onclick*="safeSaveTimeline"]');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '⏳ Menyimpan...';
+    saveBtn.disabled = true;
+    
+    // Open settings if needed
+    if (currentView !== 'settings') {
+        showTab('settings');
+        setTimeout(() => {
+            actuallySaveTimeline(saveBtn, originalText);
+        }, 400);
+    } else {
+        actuallySaveTimeline(saveBtn, originalText);
+    }
+}
+
+function actuallySaveTimeline(saveBtn, originalText) {
+    try {
+        saveTimeline();
+        showValidationMessage('Timeline berhasil disimpan!', 'success');
+        
+        // Animate timeline summary update
+        animateTimelineUpdate();
+        
+    } catch (error) {
+        showValidationMessage('Gagal menyimpan timeline', 'error');
+    } finally {
+        // Restore button
+        setTimeout(() => {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+        }, 1000);
+    }
+}
+
+// Validation Message Helper
+function showValidationMessage(message, type) {
+    const validationDiv = document.getElementById('timeline-validation');
+    if (validationDiv) {
+        validationDiv.textContent = message;
+        validationDiv.className = `validation-message ${type}`;
+        validationDiv.style.display = 'block';
+        
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            validationDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Animation for timeline update
+function animateTimelineUpdate() {
+    const elements = ['display-days-left', 'display-timeline-progress'];
+    
+    elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.transform = 'scale(1.1)';
+            el.style.transition = 'transform 0.3s';
+            
+            setTimeout(() => {
+                el.style.transform = 'scale(1)';
+            }, 300);
+        }
+    });
+}
+
+// Enhanced Date Input Interaction
+function setupDateInputEnhancements() {
+    console.log("🎯 Setting up date input enhancements...");
+    
+    const startInput = document.getElementById('start-date');
+    const endInput = document.getElementById('end-date');
+    
+    if (!startInput || !endInput) {
+        console.warn("⚠️ Date inputs not found, retrying in 500ms...");
+        setTimeout(setupDateInputEnhancements, 500);
+        return;
+    }
+    
+    console.log("✅ Date inputs found, setting up listeners...");
+    
+    // Real-time validation on change
+    [startInput, endInput].forEach(input => {
+        // Remove existing listeners first (avoid duplicates)
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+        
+        // Add new listeners
+        newInput.addEventListener('change', function() {
+            console.log(`📅 ${this.id} changed to: ${this.value}`);
+            
+            // Validate
+            validateTimelineInput();
+            
+            // Update preview
+            updateTimelinePreview();
+            
+            // Visual feedback
+            this.style.borderColor = '#3498db';
+            this.style.boxShadow = '0 0 0 2px rgba(52, 152, 219, 0.2)';
+            
+            setTimeout(() => {
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            }, 1000);
+        });
+        
+        // Focus effects
+        newInput.addEventListener('focus', function() {
+            this.style.borderColor = '#3498db';
+            this.style.boxShadow = '0 0 0 3px rgba(52, 152, 219, 0.2)';
+            this.style.transform = 'scale(1.02)';
+        });
+        
+        newInput.addEventListener('blur', function() {
+            this.style.borderColor = '';
+            this.style.boxShadow = '';
+            this.style.transform = 'scale(1)';
+        });
+    });
+    
+    console.log("✅ Date input enhancements setup complete");
+}
+
+// Clear Cache Function
+function clearLocalStorage() {
+    if (confirm('Hapus cache browser? Aplikasi akan refresh.')) {
+        localStorage.clear();
+        showAlert('info', 'Cache dihapus. Aplikasi akan refresh...');
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+
+// Initialize enhancements
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        setupDateInputEnhancements();
+    }, 1000);
+});
+
+// Debug helper untuk cek semua form elements
+function debugFormElements() {
+    console.log("=== DEBUG FORM ELEMENTS (Settings Tab) ===");
+    
+    const criticalElements = [
+        'target-amount-input',
+        'start-date',
+        'end-date',
+        'timeline-validation',
+        'display-start-date',
+        'display-end-date',
+        'display-days-left',
+        'display-timeline-progress'
+    ];
+    
+    criticalElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            console.log(`✅ ${id}:`, {
+                type: el.tagName,
+                value: el.value || el.textContent || 'N/A',
+                visible: el.offsetParent !== null,
+                parent: el.parentElement?.id || 'N/A'
+            });
+        } else {
+            console.log(`❌ ${id}: NOT FOUND IN DOM`);
+        }
+    });
+    
+    console.log("Current timeline:", currentTimeline);
+    console.log("App settings:", appSettings);
+    console.log("Active tab element:", document.querySelector('.tab-content.active')?.id);
+    console.log("=========================================");
+}
+
+// Panggil di console: debugFormElements()

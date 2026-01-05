@@ -2,23 +2,74 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Masterplan PRO - Target 300 Juta</title>
-    <meta name="theme-color" content="#3498db">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="Financial Masterplan PRO - Aplikasi perencanaan keuangan pribadi dengan timeline, dashboard, dan simulasi investasi">
+    <meta name="keywords" content="keuangan, finansial, tabungan, investasi, budget, planning">
+    <meta name="author" content="Financial Masterplan Team">
+    
+    <!-- ====== OPEN GRAPH / SOCIAL MEDIA ====== -->
+    <meta property="og:title" content="Financial Masterplan PRO">
+    <meta property="og:description" content="Plan your financial future with our advanced planning tools">
+    <meta property="og:image" content="https://yourdomain.com/icons/icon-512x512.png">
+    <meta property="og:url" content="https://yourdomain.com/">
+    <meta property="og:type" content="website">
+    
+    <!-- ====== TWITTER CARD ====== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Financial Masterplan PRO">
+    <meta name="twitter:description" content="Advanced financial planning application">
+    <meta name="twitter:image" content="https://yourdomain.com/icons/icon-512x512.png">
+    
+    <!-- ====== APPLE SPECIFIC ====== -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FinMaster">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- ====== MICROSOFT SPECIFIC ====== -->
+    <meta name="msapplication-TileColor" content="#2c3e50">
+    <meta name="msapplication-TileImage" content="icons/icon-144x144.png">
+    <meta name="msapplication-config" content="browserconfig.xml">
+    
+    <!-- ====== FAVICON & ICONS (YOUR VERSION IS GOOD) ====== -->
+    <link rel="icon" href="icons/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icons/favicon-96x96.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <!-- Optional: Additional Apple touch icons -->
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/touch-icon-ipad.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/touch-icon-iphone-retina.png">
+    
+    <!-- ====== PWA MANIFEST ====== -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Remove ?v=1.0.3 for better caching control -->
+    
+    <!-- ====== THEME COLOR (DYNAMIC POSSIBLE) ====== -->
+    <meta name="theme-color" content="#2c3e50" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1a252f" media="(prefers-color-scheme: dark)">
+    
+    <!-- ====== STYLES ====== -->
     <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json?v=1.0.2">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- ====== PRELOAD CRITICAL RESOURCES ====== -->
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preload" href="script-fixed.js" as="script">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js" as="script" crossorigin="anonymous">
+    
+    <!-- ====== CHART.JS ====== -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous" defer></script>
+    
+    <!-- ====== TITLE ====== -->
+    <title>Financial Masterplan PRO | Perencanaan Keuangan Pribadi</title>
 </head>
 <body>
     <div class="container">
         <!-- HEADER -->
         <div class="header">
-            <h1>💰 FINANCIAL MASTERPLAN PRO v3.1</h1>
+            <h1>💰 FINANCIAL MASTERPLAN PRO v1.0.3</h1>
             <div class="stats-bar">
                 <div class="stat-item">🎯 Target: <span id="header-target">Rp 300 Juta</span></div>                
                 <div class="stat-item" onclick="showTab('dashboard')">
@@ -307,97 +358,178 @@
             <!-- PENGATURAN -->
             <div id="tab-settings" class="tab-content">
                 <h2>⚙️ Pengaturan</h2>
+                <!-- ⚙️ PENGATURAN TARGET -->
                 <div class="card">
-                    <h3 class="card-title">Pengaturan Target</h3>
+                    <h3 class="card-title">🎯 Target Finansial</h3>
+                    
+                    <!-- TARGET AMOUNT -->
                     <div class="form-group">
-                        <label>Target Dana (Rp):</label>
-                        <input type="number" id="target-amount-input" value="300" min="1">
+                        <label>💰 Target Dana:</label>
+                        <div class="input-with-preset">
+                            <input type="number" id="target-amount-input" value="300" min="1" 
+                                placeholder="Contoh: 300">
+                            <span class="input-suffix">Juta Rupiah</span>
+                        </div>
+                        <div class="preset-buttons">
+                            <button class="btn-preset" onclick="setTargetPreset(100)">100 Jt</button>
+                            <button class="btn-preset" onclick="setTargetPreset(300)">300 Jt</button>
+                            <button class="btn-preset" onclick="setTargetPreset(500)">500 Jt</button>
+                            <button class="btn-preset" onclick="setTargetPreset(1000)">1 M</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Jangka Waktu (Tahun):</label>
-                        <input type="number" id="timeline-years-input" value="3" min="1">
-                    </div>
-                    <button class="btn" onclick="saveSettings()">
+                    
+                    <!-- SAVE BUTTON -->
+                    <button class="btn btn-green" onclick="safeSaveSettings()" style="width: 100%;">
                         💾 Simpan Target
                     </button>
-                    <button class="btn btn-red" onclick="resetAllData()" style="margin-left: 10px;">
-                        🗑️ Reset Semua Data
-                    </button>
                 </div>
-                <div class="card" style="margin-top: 30px;">
-                    <h3 class="card-title">📁 Backup & Restore Data</h3>
-                    
-                    <div class="form-group">
-                        <label>📤 Export Data:</label>
-                        <p style="color: #7f8c8d; margin: 10px 0; font-size: 0.9em;">
-                            Download semua data ke file JSON untuk backup atau pindah ke perangkat lain.
-                        </p>
-                        <button class="btn btn-blue" onclick="exportData()">
-                            ⬇️ Download Backup File
-                        </button>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>📥 Import Data:</label>
-                        <p style="color: #7f8c8d; margin: 10px 0; font-size: 0.9em;">
-                            Upload file JSON backup untuk restore data.
-                        </p>
-                        <input type="file" id="import-file" accept=".json" style="margin-bottom: 10px;">
-                        <button class="btn" onclick="importData()">
-                            ⬆️ Upload & Restore Data
-                        </button>
-                        <div id="import-preview" style="margin-top: 15px; display: none;">
-                            <!-- Preview akan muncul di sini -->
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>🔄 Data Saat Ini:</label>
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 0.9em;">
-                            <p><strong>Pendapatan:</strong> <span id="data-count-income">0</span> transaksi</p>
-                            <p><strong>Pengeluaran:</strong> <span id="data-count-expense">0</span> transaksi</p>
-                            <p><strong>Terakhir backup:</strong> <span id="last-backup-time">-</span></p>
-                        </div>
-                    </div>
-                </div>
-                <!-- Di dalam #tab-settings -->
+
+                <!-- ⏰ TIMELINE MANAGEMENT -->
                 <div class="card">
-                    <h3 class="card-title">📱 Multi-Device Sync</h3>
+                    <h3 class="card-title">📅 Kelola Timeline</h3>
                     
-                    <div class="alert alert-info">
-                        <strong>🔄 Cara Sync Laptop ↔ HP:</strong>
-                        <ol style="margin: 10px 0; padding-left: 20px;">
-                            <li><strong>💾 Backup</strong> data di perangkat pertama</li>
-                            <li><strong>📧 Kirim file</strong> .json ke perangkat kedua (WhatsApp/Email)</li>
-                            <li><strong>📂 Restore</strong> file di perangkat kedua</li>
-                            <li><strong>✅ Data sync!</strong></li>
-                        </ol>
+                    <!-- CURRENT TIMELINE DISPLAY -->
+                    <div class="timeline-summary">
+                        <div class="timeline-stat">
+                            <div class="stat-label">Mulai</div>
+                            <div class="stat-value" id="display-start-date">-</div>
+                        </div>
+                        <div class="timeline-arrow">→</div>
+                        <div class="timeline-stat">
+                            <div class="stat-label">Target</div>
+                            <div class="stat-value" id="display-end-date">-</div>
+                        </div>
+                        <div class="timeline-stat">
+                            <div class="stat-label">Sisa</div>
+                            <div class="stat-value" id="display-days-left">-</div>
+                            <div class="stat-sub">hari</div>
+                        </div>
+                        <div class="timeline-stat">
+                            <div class="stat-label">Progress</div>
+                            <div class="stat-value" id="display-timeline-progress">0%</div>
+                        </div>
                     </div>
                     
-                    <div style="text-align: center; margin: 20px 0;">
-                        <!-- TAMBAH INI: Input Field untuk URL -->
-                        <div style="margin-bottom: 15px;">
-                            <input type="text" 
-                                id="qrText" 
-                                placeholder="https://linzhijun87-ui.github.io/web-app/"
-                                style="width: 80%; padding: 12px; border: 2px solid #4CAF50; border-radius: 8px; font-size: 14px;">
-                            <p style="font-size: 12px; color: #666; margin-top: 5px;">
-                                Masukkan URL GitHub Pages Anda
-                            </p>
+                    <!-- TIMELINE EDITOR -->
+                    <div class="timeline-editor">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>📅 Tanggal Mulai</label>
+                                <input type="date" id="start-date" class="date-input">
+                            </div>
+                            <div class="form-group">
+                                <label>🎯 Tanggal Target</label>
+                                <input type="date" id="end-date" class="date-input">
+                            </div>
                         </div>
                         
-                        <button class="btn" onclick="generateQRCode()" style="padding: 12px 24px;">
-                            📱 Generate QR untuk HP
+                        <!-- QUICK SETTINGS -->
+                        <div class="quick-timeline">
+                            <label>⚡ Set Cepat:</label>
+                            <div class="quick-buttons">
+                                <button class="btn-quick" onclick="setQuickTimeline(1)">1 Tahun</button>
+                                <button class="btn-quick" onclick="setQuickTimeline(2)">2 Tahun</button>
+                                <button class="btn-quick" onclick="setQuickTimeline(3)">3 Tahun</button>
+                                <button class="btn-quick" onclick="setQuickTimeline(5)">5 Tahun</button>
+                                <button class="btn-quick" onclick="setQuickTimelineFromToday()">
+                                    Dari Hari Ini
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- VALIDATION & PREVIEW -->
+                        <div id="timeline-validation" class="validation-message"></div>
+                        
+                        <div class="timeline-preview">
+                            <h4>📊 Timeline Preview</h4>
+                            <div class="preview-grid">
+                                <div class="preview-item">
+                                    <span class="preview-label">Total Durasi:</span>
+                                    <span class="preview-value" id="preview-duration">-</span>
+                                </div>
+                                <div class="preview-item">
+                                    <span class="preview-label">Sisa Hari:</span>
+                                    <span class="preview-value" id="preview-days-left">-</span>
+                                </div>
+                                <div class="preview-item">
+                                    <span class="preview-label">Progress:</span>
+                                    <span class="preview-value" id="preview-progress">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ACTION BUTTONS -->
+                        <div class="action-buttons">
+                            <button class="btn btn-blue" onclick="safeSaveTimeline()">
+                                💾 Simpan Timeline
+                            </button>
+                            <button class="btn" onclick="resetToDefaultTimeline()">
+                                🔄 Default
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📱 MULTI-DEVICE & BACKUP -->
+                <div class="card">
+                    <h3 class="card-title">🔄 Backup & Sync</h3>
+                    
+                    <div class="backup-section">
+                        <div class="backup-option">
+                            <h4>📤 Export Data</h4>
+                            <p>Simpan semua data ke file JSON</p>
+                            <button class="btn" onclick="exportData()">
+                                ⬇️ Download Backup
+                            </button>
+                        </div>
+                        
+                        <div class="backup-option">
+                            <h4>📥 Import Data</h4>
+                            <p>Restore data dari file backup</p>
+                            <input type="file" id="import-file" accept=".json" 
+                                style="margin: 10px 0;">
+                            <button class="btn" onclick="importData()">
+                                ⬆️ Upload & Restore
+                            </button>
+                        </div>
+                        
+                        <div class="backup-option">
+                            <h4>📱 QR untuk HP</h4>
+                            <p>Scan untuk buka app di mobile</p>
+                            <input type="text" id="qrText" 
+                                placeholder="URL GitHub Pages" 
+                                class="qr-input">
+                            <button class="btn" onclick="generateQRCode()">
+                                📲 Generate QR
+                            </button>
+                            <div id="qrCode" class="qr-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🗑️ DATA MANAGEMENT -->
+                <div class="card card-warning">
+                    <h3 class="card-title">⚠️ Manajemen Data</h3>
+                    
+                    <div class="warning-message">
+                        <p><strong>Perhatian!</strong> Aksi ini tidak dapat dibatalkan.</p>
+                    </div>
+                    
+                    <div class="danger-actions">
+                        <button class="btn btn-red" onclick="resetAllData()">
+                            🗑️ Reset Semua Data
                         </button>
-                        
-                        <!-- TAMBAH INI: Container untuk QR Code -->
-                        <div id="qrCode" style="margin-top: 25px; min-height: 300px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
-                            <p style="color: #888;">QR Code akan muncul di sini</p>
-                        </div>
-                        
-                        <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                            Scan QR code untuk buka app di HP
-                        </p>
+                        <button class="btn" onclick="clearLocalStorage()" 
+                                style="margin-left: 10px;">
+                            🧹 Clear Cache
+                        </button>
+                    </div>
+                    
+                    <div class="data-stats">
+                        <p><strong>📊 Statistik Data:</strong></p>
+                        <p>Pendapatan: <span id="data-count-income">0</span> transaksi</p>
+                        <p>Pengeluaran: <span id="data-count-expense">0</span> transaksi</p>
+                        <p>Terakhir backup: <span id="last-backup-time">-</span></p>
                     </div>
                 </div>
             </div>
@@ -415,7 +547,16 @@
         </div>
     </div>
     <script src="script-fixed.js"></script>
-    <!-- Tambahkan sebelum </body> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Dark mode detection -->
+<script>
+    // Detect dark mode
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark-mode');
+    }
+</script>
+
+<!-- Splash screen for iOS -->
+<link rel="apple-touch-startup-image" href="icons/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 </body>
 </html>
