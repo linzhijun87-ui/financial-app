@@ -3,8 +3,8 @@
   "short_name": "FinMaster",
   "version": "1.0.3",
   "description": "Plan your financial future - Sync across devices",
-  "start_url": ".",
-  "scope": ".",
+  "start_url": "/financial-app/",
+  "scope": "/financial-app/",
   "display": "standalone",
   "display_override": ["window-controls-overlay"],
   "orientation": "any",
@@ -14,24 +14,6 @@
   
   "icons": [
     {
-      "src": "icons/favicon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/favicon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
       "src": "icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
@@ -40,8 +22,7 @@
     {
       "src": "icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ],
   
@@ -51,12 +32,6 @@
       "sizes": "1280x720",
       "type": "image/png",
       "label": "Dashboard Overview"
-    },
-    {
-      "src": "screenshots/analytics.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "label": "Financial Analytics"
     }
   ],
   
@@ -65,10 +40,10 @@
       "name": "Add Expense",
       "short_name": "Expense",
       "description": "Quickly add new expense",
-      "url": "./?tab=expenses",
+      "url": "/financial-app/?tab=expenses",
       "icons": [
         {
-          "src": "icons/shortcut-expense.png",
+          "src": "icons/icon-96x96.png",
           "sizes": "96x96",
           "type": "image/png"
         }
@@ -78,10 +53,10 @@
       "name": "View Dashboard",
       "short_name": "Dashboard",
       "description": "Open financial dashboard",
-      "url": "./?tab=dashboard",
+      "url": "/financial-app/?tab=dashboard",
       "icons": [
         {
-          "src": "icons/shortcut-dashboard.png",
+          "src": "icons/icon-96x96.png",
           "sizes": "96x96",
           "type": "image/png"
         }
@@ -89,43 +64,13 @@
     }
   ],
   
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  
-  "protocol_handlers": [
-    {
-      "protocol": "web+financial",
-      "url": "/?transaction=%s"
-    }
-  ],
-  
   "launch_handler": {
-    "client_mode": "auto"
+    "client_mode": "focus-existing"
   },
-  
-  "handle_links": "preferred",
   
   "permissions": ["clipboard-write", "clipboard-read"],
   
-  "related_applications": [
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.financial.masterplan",
-      "id": "com.financial.masterplan"
-    },
-    {
-      "platform": "webapp",
-      "url": "https://financial-masterplan.web.app/manifest.json"
-    }
-  ],
-  
-  "prefer_related_applications": false,
-  
-  "id": "/?source=pwa",
-  
+  "id": "/financial-app/",
   "dir": "ltr",
-  "lang": "en-US",
-  
-  "iarc_rating_id": "e39b3cf2-8a4e-4d2a-9c15-7e3a1f8b9d0a"
+  "lang": "en-US"
 }
