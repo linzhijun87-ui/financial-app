@@ -550,7 +550,6 @@ if ('serviceWorker' in navigator) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               console.log('🔄 New content available!');
-              // Show update notification to user
               showUpdateNotification();
             }
           });
@@ -559,16 +558,17 @@ if ('serviceWorker' in navigator) {
       .catch(function(err) {
         console.log('❌ ServiceWorker registration failed:', err);
       });
-  });
-  
-  // Background sync registration
-  if ('sync' in registration) {
+    
+    //  BACKGROUND SYNC YANG BENAR 
+    // Pakai navigator.serviceWorker.ready
     navigator.serviceWorker.ready.then(registration => {
-      registration.sync.register('sync-financial-data')
-        .then(() => console.log('✅ Background sync registered'))
-        .catch(err => console.log('❌ Sync registration failed:', err));
+      if ('sync' in registration) {
+        registration.sync.register('sync-financial-data')
+          .then(() => console.log('✅ Background sync registered'))
+          .catch(err => console.log('⚠️ Sync registration failed:', err));
+      }
     });
-  }
+  });
 }
 
 // Function to show update notification
