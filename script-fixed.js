@@ -1982,63 +1982,118 @@ function showNotifications() {
         return;
     }
     
-    // Generate real notifications dari data user
+    // Generate notifications
     const notifications = generateRealNotifications();
     
-    // Clear & render
+    // Clear list
     list.innerHTML = '';
+    
+    // Render each notification
     notifications.forEach(notif => {
         const div = document.createElement('div');
-        div.className = `alert alert-${notif.type}`;
-        div.innerHTML = `
-            <strong>${notif.icon} ${notif.title}</strong><br>
-            <small>${notif.message}</small>
-            ${notif.action ? `<br><button class="btn-small" onclick="${notif.action}">${notif.actionText}</button>` : ''}
-        `;
+        div.className = `alert alert-${notif.type} notification-item`;
+        
+        // Build HTML
+        let html = `<strong>${notif.icon} ${notif.title}</strong><br>
+                   <small>${notif.message}</small>`;
+        
+        // Add action button jika ada
+        if (notif.action && notif.actionText) {
+            html += `<br><button class="btn-small" data-action="${notif.action}">${notif.actionText}</button>`;
+        }
+        
+        div.innerHTML = html;
+        
+        // Add click handler untuk button
+        const button = div.querySelector('.btn-small');
+        if (button) {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent parent click
+                const action = this.getAttribute('data-action');
+                if (action) {
+                    showTab(action); // ⭐ INI YANG BENAR!
+                    closeModal();
+                }
+            });
+        }
+        
+        // Add click handler untuk seluruh item (optional)
+        if (notif.action) {
+            div.style.cursor = 'pointer';
+            div.addEventListener('click', function() {
+                if (notif.action) {
+                    showTab(notif.action);
+                    closeModal();
+                }
+            });
+        }
+        
         list.appendChild(div);
     });
     
-    // Show modal dengan animation
+    // Show modal
     modal.style.display = 'flex';
     setTimeout(() => {
         modal.style.opacity = '1';
-        modal.style.transform = 'scale(1)';
     }, 10);
     
-    // Reset counter
-    document.getElementById('notification-count').textContent = '0';
+    // Reset badge count (tampilkan 0 setelah dibuka)
+    updateNotificationBadge(0);
+}
+
+// Helper untuk execute action dengan safety
+function executeNotificationAction(action) {
+    try {
+        if (action === 'showTab("dashboard")') {
+            showTab('dashboard');
+        } else if (action === 'showTab("expenses")') {
+            showTab('expenses');
+        } else if (action === 'showTab("checklists")') {
+            showTab('checklists');
+        } else if (action === 'showTab("settings")') {
+            showTab('settings');
+        }
+        closeModal();
+    } catch (error) {
+        console.error('Action error:', error);
+    }
 }
 
 function generateRealNotifications() {
     const notifications = [];
-    const totalIncome = incomeRecords.reduce((sum, i) => sum + i.amount, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const totalSaved = totalIncome - totalExpenses;
+    const totalIncome = incomeRecords.reduce((sum, i) => sum + (i.amount || 0), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const totalSaved = Math.max(0, totalIncome - totalExpenses);
     const target = appSettings.targetAmount || 300000000;
-    const progress = Math.min(100, (totalSaved / target) * 100);
+    const progress = totalIncome > 0 ? Math.min(100, (totalSaved / target) * 100) : 0;
     
-    // 1. Progress notification
-    if (progress > 0 && progress < 100) {
+    // Debug log
+    console.log('Notification data:', { totalIncome, totalExpenses, totalSaved, target, progress });
+    
+    // 1. Progress notification (hanya jika ada progress)
+    if (progress > 5 && progress < 100) { // Minimal 5% progress
         notifications.push({
             icon: '📊',
             title: 'Progress Update',
             message: `Anda telah mencapai ${progress.toFixed(1)}% dari target Rp ${(target/1000000).toFixed(0)} juta`,
             type: 'info',
-            action: 'showTab("dashboard")',
-            actionText: 'Lihat Dashboard'
+            action: 'dashboard', // ⭐ PERUBAHAN: string saja, bukan function call
+            actionText: 'Lihat Dashboard',
+            priority: 1
         });
     }
     
-    // 2. Expense warning (jika pengeluaran > 70% pendapatan)
-    if (totalIncome > 0 && (totalExpenses / totalIncome) > 0.7) {
+    // 2. Expense warning (jika pengeluaran > 70% pendapatan DAN ada data)
+    if (totalIncome > 100000 && (totalExpenses / totalIncome) > 0.7) {
         const percentage = ((totalExpenses / totalIncome) * 100).toFixed(0);
         notifications.push({
             icon: '⚠️',
             title: 'Pengeluaran Tinggi',
             message: `Pengeluaran (${percentage}%) mendekati pendapatan. Perlu evaluasi.`,
             type: 'warning',
-            action: 'showTab("expenses")',
-            actionText: 'Cek Pengeluaran'
+            action: 'expenses', // ⭐ PERUBAHAN
+            actionText: 'Cek Pengeluaran',
+            priority: 2 // Higher priority
         });
     }
     
@@ -2053,46 +2108,247 @@ function generateRealNotifications() {
             title: 'Daily Streak',
             message: 'Anda telah mencatat transaksi hari ini! Pertahankan!',
             type: 'success',
-            action: '',
-            actionText: ''
+            action: '', // No action needed
+            actionText: '',
+            priority: 3
         });
     }
     
     // 4. Checklist reminder
-    const checklistItems = JSON.parse(localStorage.getItem('checklist') || '[]');
-    const pendingItems = checklistItems.filter(item => !item.completed);
-    
-    if (pendingItems.length > 0 && pendingItems.length <= 3) {
-        notifications.push({
-            icon: '✅',
-            title: 'Checklist Pending',
-            message: `Masih ada ${pendingItems.length} item checklist yang belum selesai`,
-            type: 'info',
-            action: 'showTab("checklists")',
-            actionText: 'Lanjutkan'
-        });
+    try {
+        const checklistItems = JSON.parse(localStorage.getItem('checklist') || '[]');
+        const pendingItems = checklistItems.filter(item => !item.completed);
+        
+        if (pendingItems.length > 0) {
+            notifications.push({
+                icon: '✅',
+                title: 'Checklist Pending',
+                message: `Masih ada ${pendingItems.length} item checklist yang belum selesai`,
+                type: 'info',
+                action: 'checklists', // ⭐ PERUBAHAN
+                actionText: 'Lanjutkan',
+                priority: pendingItems.length >= 3 ? 2 : 4
+            });
+        }
+    } catch (e) {
+        console.log('Error reading checklist:', e);
     }
     
     // 5. Timeline reminder
     const daysLeft = calculateRemainingDays();
-    if (daysLeft <= 30) {
+    if (daysLeft > 0 && daysLeft <= 30) {
         notifications.push({
             icon: '⏳',
             title: 'Timeline Mendekati Akhir',
             message: `Sisa ${daysLeft} hari menuju target!`,
             type: 'warning',
-            action: 'showTab("settings")',
-            actionText: 'Periksa Timeline'
+            action: 'settings', // ⭐ PERUBAHAN
+            actionText: 'Periksa Timeline',
+            priority: daysLeft <= 7 ? 1 : 2
         });
     }
     
-    return notifications.length > 0 ? notifications : [{
-        icon: '🎉',
-        title: 'Semuanya Baik!',
-        message: 'Tidak ada notifikasi penting. Teruskan progress Anda!',
-        type: 'success'
-    }];
+    // 6. First time user (jika tidak ada data sama sekali)
+    if (expenses.length === 0 && incomeRecords.length === 0) {
+        notifications.push({
+            icon: '👋',
+            title: 'Selamat Datang!',
+            message: 'Mulai dengan menambahkan pendapatan atau pengeluaran pertama Anda.',
+            type: 'info',
+            action: 'income', // ⭐ Bisa ke income atau expenses
+            actionText: 'Mulai Sekarang',
+            priority: 1
+        });
+    }
+    
+    // 7. Monthly summary (jika akhir bulan)
+    const todayDate = new Date();
+    const isEndOfMonth = todayDate.getDate() >= 25; // Minggu ke-4
+    
+    if (isEndOfMonth && (expenses.length > 0 || incomeRecords.length > 0)) {
+        notifications.push({
+            icon: '📅',
+            title: 'Akhir Bulan Mendatang',
+            message: 'Siapkan laporan keuangan bulan ini.',
+            type: 'info',
+            action: 'dashboard',
+            actionText: 'Lihat Ringkasan',
+            priority: 3
+        });
+    }
+    
+    // Sort by priority (lower number = higher priority)
+    notifications.sort((a, b) => (a.priority || 5) - (b.priority || 5));
+    
+    // Limit to max 5 notifications
+    const finalNotifications = notifications.slice(0, 5);
+    
+    // Jika tidak ada notif, kasih encouragement
+    if (finalNotifications.length === 0) {
+        finalNotifications.push({
+            icon: '🎉',
+            title: 'Semuanya Baik!',
+            message: 'Tidak ada notifikasi penting. Teruskan progress Anda!',
+            type: 'success',
+            action: '',
+            actionText: '',
+            priority: 5
+        });
+    }
+    
+    console.log('Generated notifications:', finalNotifications.length);
+    return finalNotifications;
 }
+
+// Scheduled notifications
+function setupScheduledNotifications() {
+    // Check setiap jam
+    setInterval(() => {
+        const now = new Date();
+        const hour = now.getHours();
+        
+        // Morning reminder (8-10 AM)
+        if (hour >= 8 && hour <= 10) {
+            const lastMorningReminder = localStorage.getItem('lastMorningReminder');
+            const today = now.toDateString();
+            
+            if (lastMorningReminder !== today) {
+                const hasMorningData = checkMorningData();
+                if (!hasMorningData) {
+                    // Add morning reminder notification
+                    addScheduledNotification({
+                        icon: '☀️',
+                        title: 'Morning Check-in',
+                        message: 'Jangan lupa catat pengeluaran hari ini!',
+                        type: 'info',
+                        action: 'expenses'
+                    });
+                    localStorage.setItem('lastMorningReminder', today);
+                }
+            }
+        }
+        
+        // Evening summary (8-10 PM)
+        if (hour >= 20 && hour <= 22) {
+            const lastEveningReminder = localStorage.getItem('lastEveningReminder');
+            const today = now.toDateString();
+            
+            if (lastEveningReminder !== today) {
+                addScheduledNotification({
+                    icon: '🌙',
+                    title: 'Evening Summary',
+                    message: 'Review pengeluaran hari ini sebelum tidur.',
+                    type: 'info',
+                    action: 'dashboard'
+                });
+                localStorage.setItem('lastEveningReminder', today);
+            }
+        }
+    }, 60 * 60 * 1000); // Every hour
+}
+
+function addScheduledNotification(notif) {
+    // Save to localStorage untuk ditampilkan nanti
+    const scheduled = JSON.parse(localStorage.getItem('scheduled_notifications') || '[]');
+    scheduled.push({
+        ...notif,
+        timestamp: new Date().toISOString(),
+        read: false
+    });
+    
+    // Keep only last 10
+    if (scheduled.length > 10) {
+        scheduled.splice(0, scheduled.length - 10);
+    }
+    
+    localStorage.setItem('scheduled_notifications', JSON.stringify(scheduled));
+    
+    // Update badge
+    checkForNotifications();
+}
+
+function checkMorningData() {
+    const today = new Date().toISOString().split('T')[0];
+    return expenses.some(e => e.date === today) || 
+           incomeRecords.some(i => i.date === today);
+}
+
+// Function untuk update badge
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notification-badge');
+    const countElement = document.getElementById('notification-count');
+    
+    if (!badge) return;
+    
+    // Update badge text
+    badge.textContent = count > 99 ? '99+' : count;
+    
+    // Update count di modal
+    if (countElement) {
+        countElement.textContent = count;
+    }
+    
+    // Tampilkan/sembunyikan badge
+    if (count > 0) {
+        badge.style.display = 'flex';
+        
+        // Warna berdasarkan jumlah
+        badge.classList.remove('low', 'medium', 'high');
+        if (count >= 5) {
+            badge.classList.add('high');
+        } else if (count >= 3) {
+            badge.classList.add('medium');
+        } else {
+            badge.classList.add('low');
+        }
+        
+        // Tambah animation jika banyak notif
+        if (count >= 3) {
+            badge.style.animation = 'pulse 1s infinite';
+        } else {
+            badge.style.animation = 'none';
+        }
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// Update badge secara periodic
+function checkForNotifications() {
+    const notifications = generateRealNotifications();
+    updateNotificationBadge(notifications.length);
+    
+    // Simpan last checked time
+    localStorage.setItem('lastNotificationCheck', new Date().toISOString());
+}
+
+// Check setiap 5 menit
+setInterval(checkForNotifications, 5 * 60 * 1000);
+
+// Check saat app load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkForNotifications, 2000);
+});
+
+// Check saat ada perubahan data
+function setupNotificationWatchers() {
+    // Watch untuk perubahan data
+    const originalSave = saveToLocalStorage;
+    saveToLocalStorage = function() {
+        originalSave.apply(this, arguments);
+        setTimeout(checkForNotifications, 500); // Check setelah save
+    };
+    
+    // Watch untuk timeline changes
+    const originalSaveTimeline = saveTimeline;
+    saveTimeline = function() {
+        originalSaveTimeline.apply(this, arguments);
+        setTimeout(checkForNotifications, 500);
+    };
+}
+
+// Initialize
+setupNotificationWatchers();
 
 // ========== 💸 FUNGSI PENGELUARAN ==========
 function addExpense() {

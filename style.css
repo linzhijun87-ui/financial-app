@@ -1439,3 +1439,49 @@ body {
 .btn-small:hover {
     background: #2980b9;
 }
+
+/* Notification Badge */
+.notification-icon {
+    position: relative;
+    cursor: pointer;
+    font-size: 1.5em;
+    padding: 5px 10px;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: 0;
+    background: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    animation: pulse 2s infinite;
+}
+
+/* Animation untuk badge */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Different colors berdasarkan jumlah */
+.notification-badge.high {
+    background: #e74c3c; /* Merah untuk banyak notif */
+}
+
+.notification-badge.medium {
+    background: #f39c12; /* Orange */
+}
+
+.notification-badge.low {
+    background: #2ecc71; /* Hijau */
+}
