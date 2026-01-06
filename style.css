@@ -1406,3 +1406,36 @@ body {
     text-decoration: line-through;
     color: #7f8c8d;
 }
+
+/* Di style.css tambah: */
+.notification-item {
+    cursor: pointer;
+    transition: all 0.3s;
+    border-left: 4px solid transparent;
+}
+
+.notification-item:hover {
+    background: #f8f9fa;
+    border-left-color: #3498db;
+    transform: translateX(5px);
+}
+
+.notification-item.unread {
+    background: rgba(52, 152, 219, 0.1);
+    font-weight: 500;
+}
+
+.btn-small {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.btn-small:hover {
+    background: #2980b9;
+}

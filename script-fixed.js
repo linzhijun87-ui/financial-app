@@ -1977,18 +1977,121 @@ function showNotifications() {
     const modal = document.getElementById('notification-modal');
     const list = document.getElementById('notification-list');
     
-    // Buat notifikasi dummy
-    list.innerHTML = `
-        <div class="alert alert-info">
-            <strong>📊 Progress:</strong> Anda telah mencapai 15% dari target.
-        </div>
-        <div class="alert alert-warning">
-            <strong>⚠️ Pengeluaran:</strong> Pengeluaran bulan ini melebihi anggaran.
-        </div>
-    `;
+    if (!modal || !list) {
+        console.error('Notification elements not found');
+        return;
+    }
     
+    // Generate real notifications dari data user
+    const notifications = generateRealNotifications();
+    
+    // Clear & render
+    list.innerHTML = '';
+    notifications.forEach(notif => {
+        const div = document.createElement('div');
+        div.className = `alert alert-${notif.type}`;
+        div.innerHTML = `
+            <strong>${notif.icon} ${notif.title}</strong><br>
+            <small>${notif.message}</small>
+            ${notif.action ? `<br><button class="btn-small" onclick="${notif.action}">${notif.actionText}</button>` : ''}
+        `;
+        list.appendChild(div);
+    });
+    
+    // Show modal dengan animation
     modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.style.opacity = '1';
+        modal.style.transform = 'scale(1)';
+    }, 10);
+    
+    // Reset counter
     document.getElementById('notification-count').textContent = '0';
+}
+
+function generateRealNotifications() {
+    const notifications = [];
+    const totalIncome = incomeRecords.reduce((sum, i) => sum + i.amount, 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalSaved = totalIncome - totalExpenses;
+    const target = appSettings.targetAmount || 300000000;
+    const progress = Math.min(100, (totalSaved / target) * 100);
+    
+    // 1. Progress notification
+    if (progress > 0 && progress < 100) {
+        notifications.push({
+            icon: '📊',
+            title: 'Progress Update',
+            message: `Anda telah mencapai ${progress.toFixed(1)}% dari target Rp ${(target/1000000).toFixed(0)} juta`,
+            type: 'info',
+            action: 'showTab("dashboard")',
+            actionText: 'Lihat Dashboard'
+        });
+    }
+    
+    // 2. Expense warning (jika pengeluaran > 70% pendapatan)
+    if (totalIncome > 0 && (totalExpenses / totalIncome) > 0.7) {
+        const percentage = ((totalExpenses / totalIncome) * 100).toFixed(0);
+        notifications.push({
+            icon: '⚠️',
+            title: 'Pengeluaran Tinggi',
+            message: `Pengeluaran (${percentage}%) mendekati pendapatan. Perlu evaluasi.`,
+            type: 'warning',
+            action: 'showTab("expenses")',
+            actionText: 'Cek Pengeluaran'
+        });
+    }
+    
+    // 3. Daily streak (jika ada data hari ini)
+    const today = new Date().toISOString().split('T')[0];
+    const hasTodayData = expenses.some(e => e.date === today) || 
+                        incomeRecords.some(i => i.date === today);
+    
+    if (hasTodayData) {
+        notifications.push({
+            icon: '🔥',
+            title: 'Daily Streak',
+            message: 'Anda telah mencatat transaksi hari ini! Pertahankan!',
+            type: 'success',
+            action: '',
+            actionText: ''
+        });
+    }
+    
+    // 4. Checklist reminder
+    const checklistItems = JSON.parse(localStorage.getItem('checklist') || '[]');
+    const pendingItems = checklistItems.filter(item => !item.completed);
+    
+    if (pendingItems.length > 0 && pendingItems.length <= 3) {
+        notifications.push({
+            icon: '✅',
+            title: 'Checklist Pending',
+            message: `Masih ada ${pendingItems.length} item checklist yang belum selesai`,
+            type: 'info',
+            action: 'showTab("checklists")',
+            actionText: 'Lanjutkan'
+        });
+    }
+    
+    // 5. Timeline reminder
+    const daysLeft = calculateRemainingDays();
+    if (daysLeft <= 30) {
+        notifications.push({
+            icon: '⏳',
+            title: 'Timeline Mendekati Akhir',
+            message: `Sisa ${daysLeft} hari menuju target!`,
+            type: 'warning',
+            action: 'showTab("settings")',
+            actionText: 'Periksa Timeline'
+        });
+    }
+    
+    return notifications.length > 0 ? notifications : [{
+        icon: '🎉',
+        title: 'Semuanya Baik!',
+        message: 'Tidak ada notifikasi penting. Teruskan progress Anda!',
+        type: 'success'
+    }];
 }
 
 // ========== 💸 FUNGSI PENGELUARAN ==========
