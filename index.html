@@ -2,7 +2,9 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    
+    <!-- ====== SEO & META ====== -->
     <meta name="description" content="Financial Masterplan PRO - Aplikasi perencanaan keuangan pribadi dengan timeline, dashboard, dan simulasi investasi">
     <meta name="keywords" content="keuangan, finansial, tabungan, investasi, budget, planning">
     <meta name="author" content="Financial Masterplan Team">
@@ -10,54 +12,51 @@
     <!-- ====== OPEN GRAPH / SOCIAL MEDIA ====== -->
     <meta property="og:title" content="Financial Masterplan PRO">
     <meta property="og:description" content="Plan your financial future with our advanced planning tools">
-    <meta property="og:image" content="https://yourdomain.com/icons/icon-512x512.png">
-    <meta property="og:url" content="https://yourdomain.com/">
+    <meta property="og:image" content="https://linzhijun87-ui.github.io/financial-app/icons/icon-512x512.png">
+    <meta property="og:url" content="https://linzhijun87-ui.github.io/financial-app/">
     <meta property="og:type" content="website">
     
     <!-- ====== TWITTER CARD ====== -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Financial Masterplan PRO">
     <meta name="twitter:description" content="Advanced financial planning application">
-    <meta name="twitter:image" content="https://yourdomain.com/icons/icon-512x512.png">
+    <meta name="twitter:image" content="https://linzhijun87-ui.github.io/financial-app/icons/icon-512x512.png">
     
-    <!-- ====== APPLE SPECIFIC ====== -->
+    <!-- ====== PWA & THEME ====== -->
+    <meta name="theme-color" content="#2c3e50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FinMaster">
     <meta name="format-detection" content="telephone=no">
     <meta name="mobile-web-app-capable" content="yes">
     
-    <!-- ====== MICROSOFT SPECIFIC ====== -->
+    <!-- ====== MICROSOFT ====== -->
     <meta name="msapplication-TileColor" content="#2c3e50">
-    <meta name="msapplication-TileImage" content="icons/icon-144x144.png">
-    <meta name="msapplication-config" content="browserconfig.xml">
     
-    <!-- ====== FAVICON & ICONS (YOUR VERSION IS GOOD) ====== -->
-    <link rel="icon" href="icons/favicon.ico" type="image/x-icon">
-    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="icons/favicon-96x96.png">
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <!-- Optional: Additional Apple touch icons -->
-    <!-- <link rel="apple-touch-icon" sizes="152x152" href="icons/touch-icon-ipad.png"> -->
-    <!-- <link rel="apple-touch-icon" sizes="180x180" href="icons/touch-icon-iphone-retina.png"> -->
+    <!-- ====== FAVICON & ICONS ====== -->
+    <!-- PAKAI RELATIVE PATH -->
+    <link rel="icon" href="favicon.ico">
+    <link rel="icon" href="icons/icon-192x192.png" type="image/png" sizes="192x192">
+    <link rel="icon" href="icons/icon-512x512.png" type="image/png" sizes="512x512">
+    <link rel="apple-touch-icon" href="icons/icon-180x180.png">
     
     <!-- ====== PWA MANIFEST ====== -->
     <link rel="manifest" href="manifest.json">
-    <!-- Remove ?v=1.0.3 for better caching control -->
     
-    <!-- ====== THEME COLOR (DYNAMIC POSSIBLE) ====== -->
-    <meta name="theme-color" content="#2c3e50" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#1a252f" media="(prefers-color-scheme: dark)">
+    <!-- ====== SPLASH SCREENS ====== -->
+    <link rel="apple-touch-startup-image" 
+          href="splash/splash-1179x2556.png"
+          media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" 
+          href="splash/splash-1536x2048.png"
+          media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
     
     <!-- ====== STYLES ====== -->
     <link rel="stylesheet" href="style.css">
     
-    <!-- ====== PRELOAD CRITICAL RESOURCES ====== -->
+    <!-- ====== PRELOAD ====== -->
     <link rel="preload" href="style.css" as="style">
     <link rel="preload" href="script-fixed.js" as="script">
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js" as="script" crossorigin="anonymous">
     
     <!-- ====== CHART.JS ====== -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous" defer></script>

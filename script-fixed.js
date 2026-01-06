@@ -704,6 +704,106 @@ window.addEventListener('online', () => {
         }
     }
 });
+
+// ========== SERVICE WORKER REGISTRATION ==========
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) {
+        console.log('❌ Service Worker not supported');
+        return;
+    }
+    
+    window.addEventListener('load', () => {
+        // ⭐ RELATIVE PATH untuk Service Worker
+        navigator.serviceWorker.register('service-worker.js')
+            .then(registration => {
+                console.log('✅ Service Worker registered:', registration.scope);
+                
+                // Check for updates
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    console.log('🔄 Service Worker update found!');
+                    
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('🔄 New version available');
+                            if (confirm('Update tersedia! Muat ulang aplikasi?')) {
+                                window.location.reload();
+                            }
+                        }
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('❌ Service Worker registration failed:', error);
+            });
+    });
+}
+
+// ========== BACKGROUND SYNC HELPERS ==========
+function setupBackgroundSync() {
+    if (!('serviceWorker' in navigator)) return;
+    
+    navigator.serviceWorker.ready.then(registration => {
+        if ('sync' in registration) {
+            registration.sync.register('sync-financial-data')
+                .then(() => console.log('✅ Background sync registered'))
+                .catch(err => console.log('⚠️ Background sync:', err));
+        }
+    });
+}
+
+// ========== OFFLINE DATA HANDLING ==========
+function saveForOffline(data, type) {
+    const pending = JSON.parse(localStorage.getItem('offline_pending') || '[]');
+    const item = {
+        id: 'offline_' + Date.now(),
+        data: data,
+        type: type,
+        timestamp: new Date().toISOString()
+    };
+    
+    pending.push(item);
+    localStorage.setItem('offline_pending', JSON.stringify(pending));
+    
+    // Trigger sync
+    setupBackgroundSync();
+    
+    return item.id;
+}
+
+// Check pending data when online
+window.addEventListener('online', () => {
+    const pending = JSON.parse(localStorage.getItem('offline_pending') || '[]');
+    if (pending.length > 0) {
+        console.log(`🌐 Online - ${pending.length} pending items`);
+        setupBackgroundSync();
+    }
+});
+
+// ========== PATH FIXER ==========
+function fixAllPaths() {
+    // Fix dynamic paths jika perlu
+    const base = window.location.pathname.includes('financial-app') 
+        ? '/financial-app/' 
+        : './';
+    
+    console.log('Using base path:', base);
+    
+    // Update manifest jika di GitHub Pages
+    if (window.location.hostname.includes('github.io')) {
+        const manifest = document.querySelector('link[rel="manifest"]');
+        if (manifest) {
+            manifest.href = 'manifest.json';
+        }
+    }
+}
+
+// ========== INITIALIZE ==========
+document.addEventListener('DOMContentLoaded', () => {
+    fixAllPaths();
+    registerServiceWorker();
+    setupBackgroundSync();
+});
 // ========== 🏠 FUNGSI INISIALISASI ==========
 // ⭐⭐ REPLACE seluruh initializeApp() dengan ini: ⭐⭐
 function initializeApp() {

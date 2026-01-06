@@ -1,12 +1,11 @@
 {
   "name": "Financial Masterplan PRO",
   "short_name": "FinMaster",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Plan your financial future - Sync across devices",
-  "start_url": "/financial-app/",
-  "scope": "/financial-app/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
-  "display_override": ["window-controls-overlay"],
   "orientation": "any",
   "background_color": "#2c3e50",
   "theme_color": "#3498db",
@@ -17,21 +16,25 @@
       "src": "icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
-    }
-  ],
-  
-  "screenshots": [
-    {
-      "src": "screenshots/dashboard.png",
-      "sizes": "1280x720",
       "type": "image/png",
-      "label": "Dashboard Overview"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192x192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512x512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   
@@ -40,35 +43,15 @@
       "name": "Add Expense",
       "short_name": "Expense",
       "description": "Quickly add new expense",
-      "url": "/financial-app/?tab=expenses",
-      "icons": [
-        {
-          "src": "icons/icon-96x96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
+      "url": "./?tab=expenses"
     },
     {
       "name": "View Dashboard",
       "short_name": "Dashboard",
       "description": "Open financial dashboard",
-      "url": "/financial-app/?tab=dashboard",
-      "icons": [
-        {
-          "src": "icons/icon-96x96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
+      "url": "./?tab=dashboard"
     }
   ],
-  
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  },
-  
-  "permissions": ["clipboard-write", "clipboard-read"],
   
   "id": "/financial-app/",
   "dir": "ltr",
